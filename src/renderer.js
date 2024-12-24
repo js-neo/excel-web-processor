@@ -15,6 +15,7 @@ document.getElementById('selectAvrFile').addEventListener('change', async (event
     const file = event.target.files[0];
     if (file) {
         avrFilePath = file;
+        console.log("avrFilePath:", avrFilePath);
         console.log('Выбран файл АВР:', avrFilePath.name);
     }
 });
@@ -38,67 +39,76 @@ async function processExcelFiles(mainFile, avrFile) {
     const avrSheet = avrWorkbook.worksheets[0];
 
     const avrFileName = avrFile.name.replace('.xlsx', '');
-    console.log("avrFileName", avrFileName);
     const quantityColumnName = `Количество ${avrFileName}`;
     const costColumnName = `Стоимость ${avrFileName}`;
 
-    const totalColumns = mainSheet.columnCount;
-    const insertIndex = totalColumns - 4;
-    console.log(`totalColumns: ${totalColumns}`);
-    console.log(`insertIndex: ${insertIndex}`);
+    console.log("Заголовки основного файла:");
+    for (let col = 1; col <= mainSheet.columnCount; col++) {
+        console.log(`Column ${col}: ${mainSheet.getCell(1, col).value}`);
+    }
+
+    const insertIndex = mainSheet.columnCount - 4;
 
     let quantityExists = false;
     let costExists = false;
 
-    for (let col = 1; col <= totalColumns; col++) {
+    // Проверяем наличие колонок
+    for (let col = 1; col <= mainSheet.columnCount; col++) {
         const header = mainSheet.getCell(1, col).value;
-        console.log("header: ", header);
         if (header === quantityColumnName) quantityExists = true;
         if (header === costColumnName) costExists = true;
     }
 
-    if (!quantityExists && !costExists) {
-        mainSheet.spliceColumns(insertIndex, 0, [quantityColumnName] , [costColumnName]);
+
+    if (!costExists) {
+        console.log(`Добавление колонки: ${costColumnName}`);
+        mainSheet.spliceColumns(insertIndex, 0, [costColumnName]);
     }
 
+    if (!quantityExists) {
+        console.log(`Добавление колонки: ${quantityColumnName}`);
+        mainSheet.spliceColumns(insertIndex + (costExists ? 1 : 0), 0, [quantityColumnName]);
+    }
+
+    console.log("Заголовки основного файла после добавления колонок:");
+    for (let col = 1; col <= mainSheet.columnCount + (quantityExists ? 1 : 0) + (costExists ? 1 : 0); col++) {
+        console.log(`Column ${col}: ${mainSheet.getCell(1, col).value}`);
+    }
+
+    // Обработка данных
     const mainData = mainSheet.getSheetValues().slice(2);
     const avrData = avrSheet.getSheetValues().slice(2);
-    const avrMap = new Map(avrData.map(row => [row[1], row]));
+    const avrMap = new Map(avrData.map(row => [row[2], row]));
 
     mainData.forEach((row, index) => {
-        const avrRow = avrMap.get(row[1]);
-
+        const avrRow = avrMap.get(row[2]);
         if (avrRow) {
-            const quantityAvr = avrRow[2];
-            const unitPrice = row[4];
-            const doneColumnIndex = totalColumns - 5;
-            const quantityDone = row[doneColumnIndex];
-
-            if (!quantityExists && !costExists) {
-                mainSheet.getCell(index + 2, insertIndex).value = quantityAvr;
-                mainSheet.getCell(index + 2, insertIndex + 1).value = quantityAvr * unitPrice;
-            }
-
-            mainSheet.getCell(index + 2, doneColumnIndex).value = quantityDone + quantityAvr;
-            mainSheet.getCell(index + 2, doneColumnIndex + 1).value = (quantityDone + quantityAvr) * unitPrice;
-
-            const quantityRemaining = row[3] - (quantityDone + quantityAvr);
-            mainSheet.getCell(index + 2, 9).value = quantityRemaining;
-            mainSheet.getCell(index + 2, 10).value = quantityRemaining * unitPrice;
-
-            const costRemaining = quantityRemaining * unitPrice;
-            if (costRemaining < 0) {
-                mainSheet.getCell(index + 2, 11).value = Math.abs(costRemaining);
-            }
+            mainSheet.getCell(index + 2, insertIndex).value = avrRow[4];
         }
     });
 
     for (let row = 2; row <= mainData.length + 1; row++) {
-        mainSheet.getCell(`F${row}`).value = { formula: `D${row} * E${row}` };
-        mainSheet.getCell(`H${row}`).value = { formula: `G${row} * E${row}` };
-        mainSheet.getCell(`I${row}`).value = { formula: `D${row} - ${quantityColumnName}${row}` };
-        mainSheet.getCell(`J${row}`).value = { formula: `I${row} * E${row}` };
-        mainSheet.getCell(`K${row}`).value = { formula: `ЕСЛИ(J${row}<0; ABS(J${row}); 0)` };
+        const lastColumnIndex = mainSheet.columnCount;
+        const penultimateColumnIndex = lastColumnIndex - 1;
+        const costCompletedColumnIndex = lastColumnIndex - 3;
+        const penultimateColumnLetter = String.fromCharCode(64 + penultimateColumnIndex);
+        const costCompletedColumnLetter = String.fromCharCode(64 + costCompletedColumnIndex);
+        console.log("penultimateColumnLetter:", penultimateColumnLetter);
+        console.log("costCompletedColumnLetter:", costCompletedColumnLetter);
+
+        const totalCostFormula = `D${row} * E${row}`;
+        const completedCostFormula = `G${row} * E${row}`;
+        const remainingCostFormula = `D${row} - ${insertIndex}${row}`;
+
+
+        const excessFormula = `ЕСЛИ(${penultimateColumnLetter}${row}<0; ABS(${penultimateColumnLetter}${row}); 0)`;
+        console.log(`Excess formula: ${excessFormula}`);
+
+
+        mainSheet.getCell(`F${row}`).value = { formula: totalCostFormula };
+        mainSheet.getCell(`H${row}`).value = { formula: completedCostFormula };
+        mainSheet.getCell(row, insertIndex + 2).value = { formula: remainingCostFormula };
+        mainSheet.getCell(row, insertIndex + 6).value = { formula: excessFormula };
     }
 
     return await mainWorkbook.xlsx.writeBuffer();
@@ -114,7 +124,6 @@ async function saveFile(data) {
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
-
 
     URL.revokeObjectURL(url);
 }

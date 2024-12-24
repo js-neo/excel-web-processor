@@ -42,40 +42,53 @@ async function processExcelFiles(mainFile, avrFile) {
     const quantityColumnName = `Количество ${avrFileName}`;
     const costColumnName = `Стоимость ${avrFileName}`;
 
-    console.log("Заголовки основного файла:");
-    for (let col = 1; col <= mainSheet.columnCount; col++) {
-        console.log(`Column ${col}: ${mainSheet.getCell(1, col).value}`);
-    }
-
     const insertIndex = mainSheet.columnCount - 4;
 
     let quantityExists = false;
     let costExists = false;
 
-    // Проверяем наличие колонок
     for (let col = 1; col <= mainSheet.columnCount; col++) {
         const header = mainSheet.getCell(1, col).value;
         if (header === quantityColumnName) quantityExists = true;
         if (header === costColumnName) costExists = true;
     }
 
-
     if (!costExists) {
-        console.log(`Добавление колонки: ${costColumnName}`);
         mainSheet.spliceColumns(insertIndex, 0, [costColumnName]);
     }
 
     if (!quantityExists) {
-        console.log(`Добавление колонки: ${quantityColumnName}`);
         mainSheet.spliceColumns(insertIndex + (costExists ? 1 : 0), 0, [quantityColumnName]);
     }
 
-    console.log("Заголовки основного файла после добавления колонок:");
-    for (let col = 1; col <= mainSheet.columnCount + (quantityExists ? 1 : 0) + (costExists ? 1 : 0); col++) {
-        console.log(`Column ${col}: ${mainSheet.getCell(1, col).value}`);
+    const format = `_-* #,##0.00_-;_-* "-" #,##0.00_-;_-* "-"??_-;_-@_-`;
+    for (let row = 1; row <= mainSheet.rowCount; row++) {
+        for (let col = 1; col <= mainSheet.columnCount; col++) {
+            mainSheet.getCell(row, col).numFmt = format;
+        }
     }
 
-    // Обработка данных
+    const borderStyle = {
+        top: { style: 'thin' },
+        left: { style: 'thin' },
+        bottom: { style: 'thin' },
+        right: { style: 'thin' },
+    };
+
+    const newColumns = [costColumnName, quantityColumnName];
+    newColumns.forEach((column, idx) => {
+        const colIndex = insertIndex + idx;
+        for (let row = 1; row <= mainSheet.rowCount; row++) {
+            const cell = mainSheet.getCell(row, colIndex);
+            cell.border = {
+                top: { style: borderStyle.top.style },
+                left: { style: borderStyle.left.style },
+                bottom: { style: borderStyle.bottom.style },
+                right: { style: borderStyle.right.style },
+            };
+        }
+    });
+
     const mainData = mainSheet.getSheetValues().slice(2);
     const avrData = avrSheet.getSheetValues().slice(2);
     const avrMap = new Map(avrData.map(row => [row[2], row]));
@@ -93,21 +106,29 @@ async function processExcelFiles(mainFile, avrFile) {
         const costCompletedColumnIndex = lastColumnIndex - 3;
         const penultimateColumnLetter = String.fromCharCode(64 + penultimateColumnIndex);
         const costCompletedColumnLetter = String.fromCharCode(64 + costCompletedColumnIndex);
-        console.log("penultimateColumnLetter:", penultimateColumnLetter);
         console.log("costCompletedColumnLetter:", costCompletedColumnLetter);
 
+        const columnLetterInsertIndexMinus1 = String.fromCharCode(65 + insertIndex - 1);
+        const columnLetterInsertIndexPlus1 = String.fromCharCode(65 + insertIndex + 1);
+        const columnLetterInsertIndexPlus3 = String.fromCharCode(65 + insertIndex + 3);
+
+        const prevValue = mainSheet.getCell(`${columnLetterInsertIndexMinus1}${row}`).value;
+        const curValue = mainSheet.getCell(`${columnLetterInsertIndexPlus1}${row}`).value;
+        const totalValue = prevValue + curValue;
+
         const totalCostFormula = `D${row} * E${row}`;
-        const completedCostFormula = `G${row} * E${row}`;
-        const remainingCostFormula = `D${row} - ${insertIndex}${row}`;
-
-
-        const excessFormula = `ЕСЛИ(${penultimateColumnLetter}${row}<0; ABS(${penultimateColumnLetter}${row}); 0)`;
-        console.log(`Excess formula: ${excessFormula}`);
-
+        const avrCostFormula = `${columnLetterInsertIndexMinus1}${row} * E${row}`;
+        const completedCostFormula = `${columnLetterInsertIndexPlus1}${row} * E${row}`;
+        const quantityRemainingFormula = `D${row} - ${columnLetterInsertIndexPlus1}${row}`;
+        const remainingCostFormula = `${columnLetterInsertIndexPlus3}${row} * E${row}`;
+        const excessFormula = `IF(${penultimateColumnLetter}${row}<0, ABS(${penultimateColumnLetter}${row}), 0)`;
 
         mainSheet.getCell(`F${row}`).value = { formula: totalCostFormula };
-        mainSheet.getCell(`H${row}`).value = { formula: completedCostFormula };
-        mainSheet.getCell(row, insertIndex + 2).value = { formula: remainingCostFormula };
+        mainSheet.getCell(row, insertIndex + 1).value = { formula: avrCostFormula };
+        mainSheet.getCell(row, insertIndex + 2).value = totalValue;
+        mainSheet.getCell(row, insertIndex + 3).value = { formula: completedCostFormula };
+        mainSheet.getCell(row, insertIndex + 4).value = { formula: quantityRemainingFormula };
+        mainSheet.getCell(row, insertIndex + 5).value = { formula: remainingCostFormula };
         mainSheet.getCell(row, insertIndex + 6).value = { formula: excessFormula };
     }
 

@@ -126,6 +126,7 @@ async function processExcelFiles(mainFile, avrFile) {
             cell.value = avrRow ? avrRow[4] : 0;
     });
 
+
     for (let row = 2; row <= mainData.length + 1; row++) {
         const lastColumnIndex = mainSheet.columnCount;
         const penultimateColumnIndex = lastColumnIndex - 1;
@@ -154,7 +155,68 @@ async function processExcelFiles(mainFile, avrFile) {
         mainSheet.getCell(row, insertIndex + 5).value = { formula: remainingCostFormula };
         mainSheet.getCell(row, insertIndex + 6).value = { formula: excessFormula };
     }
+    function getColumnLetter(columnIndex) {
+        let letter = '';
+        while (columnIndex > 0) {
+            const modulo = (columnIndex - 1) % 26;
+            letter = String.fromCharCode(65 + modulo) + letter;
+            columnIndex = Math.floor((columnIndex - modulo) / 26);
+        }
+        console.log("letter: ", letter);
+        return letter;
+    }
 
+    const lastColumnIndex = mainSheet.columnCount;
+
+    if (lastColumnIndex > 0) {
+        const penultimateColumnIndex = lastColumnIndex - 1;
+        const penultimateColumnLetter = getColumnLetter(penultimateColumnIndex);
+
+        console.log('Last Column Index:', lastColumnIndex);
+        console.log('Penultimate Column Index:', penultimateColumnIndex);
+        console.log('Penultimate Column Letter:', penultimateColumnLetter);
+
+        const formula_Tomato = `=$${penultimateColumnLetter}2<0`;
+        const formula_PastelGreen = `=AND(NOT(ISBLANK($${penultimateColumnLetter}2)),$${penultimateColumnLetter}2=0)`;
+
+        try {
+            const cellValue = mainSheet.getCell(`${penultimateColumnLetter}2`).value;
+            console.log(`Value in ${penultimateColumnLetter}2:`, cellValue);
+
+            mainSheet.addConditionalFormatting({
+                ref: `A2:${getColumnLetter(lastColumnIndex)}${mainSheet.rowCount}`,
+                rules: [
+                    {
+                        type: 'expression',
+                        formulae: [formula_Tomato],
+                        style: {
+                            fill: {
+                                type: 'pattern',
+                                pattern: 'solid',
+                                bgColor: { argb: 'FFFF6347' }
+                            }
+                        }
+                    },
+                    {
+                        type: 'expression',
+                        formulae: [formula_PastelGreen],
+                        style: {
+                            fill: {
+                                type: 'pattern',
+                                pattern: 'solid',
+                                bgColor: { argb: 'C8FFC8' }
+                            }
+                        }
+                    }
+
+                ]
+            });
+        } catch (error) {
+            console.error('Error adding conditional formatting:', error);
+        }
+    } else {
+        console.error('No columns available in the sheet.');
+    }
     return await mainWorkbook.xlsx.writeBuffer();
 }
 

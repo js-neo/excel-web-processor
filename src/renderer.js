@@ -1,26 +1,34 @@
+import './styles.css';
 import ExcelJS from 'exceljs';
 
 let mainFilePath = '';
 let avrFilePath = '';
 
-document.getElementById('selectMainFile').addEventListener('change', async (event) => {
+const selectMainFile = document.getElementById('selectMainFile');
+const selectAvrFile = document.getElementById('selectAvrFile');
+const processFilesButton = document.getElementById('processFilesButton');
+const outputDiv = document.getElementById('output');
+
+const handleFileSelect = (setFilePath) => (event) => {
     const file = event.target.files[0];
     if (file) {
-        mainFilePath = file;
-        console.log('Выбран основной файл:', mainFilePath.name);
+        setFilePath(file);
+        console.log('Выбран файл:', file.name);
     }
-});
+};
 
-document.getElementById('selectAvrFile').addEventListener('change', async (event) => {
-    const file = event.target.files[0];
-    if (file) {
-        avrFilePath = file;
-        console.log("avrFilePath:", avrFilePath);
-        console.log('Выбран файл АВР:', avrFilePath.name);
-    }
-});
+const setMainFilePath = (file) => {
+    mainFilePath = file;
+};
 
-document.getElementById('processFilesButton').addEventListener('click', async () => {
+const setAvrFilePath = (file) => {
+    avrFilePath = file;
+};
+
+selectMainFile.addEventListener('change', handleFileSelect(setMainFilePath));
+selectAvrFile.addEventListener('change', handleFileSelect(setAvrFilePath));
+
+processFilesButton.addEventListener('click', async () => {
     if (mainFilePath && avrFilePath) {
         const processedData = await processExcelFiles(mainFilePath, avrFilePath);
         await saveFile(processedData);
@@ -48,7 +56,9 @@ async function processExcelFiles(mainFile, avrFile) {
     let costExists = false;
 
     for (let col = 1; col <= mainSheet.columnCount; col++) {
-        const header = mainSheet.getCell(1, col).value;
+        const headerCell = mainSheet.getCell(1, col);
+        const header = headerCell.value;
+
         if (header === quantityColumnName) quantityExists = true;
         if (header === costColumnName) costExists = true;
     }
@@ -61,33 +71,50 @@ async function processExcelFiles(mainFile, avrFile) {
         mainSheet.spliceColumns(insertIndex + (costExists ? 1 : 0), 0, [quantityColumnName]);
     }
 
-    const format = `_-* #,##0.00_-;_-* "-" #,##0.00_-;_-* "-"??_-;_-@_-`;
-    for (let row = 1; row <= mainSheet.rowCount; row++) {
-        for (let col = 1; col <= mainSheet.columnCount; col++) {
-            mainSheet.getCell(row, col).numFmt = format;
-        }
-    }
+    const defaultRowHeight = 14;
+    const headerRowHeight = defaultRowHeight * 2;
 
+    const textFormat = '@';
+    const format = `_-* #,##0.00_-;_-* "-" #,##0.00_-;_-* "-"??_-;_-@_-`;
     const borderStyle = {
         top: { style: 'thin' },
         left: { style: 'thin' },
         bottom: { style: 'thin' },
         right: { style: 'thin' },
     };
+    const headerFill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FFE3F2FD' }
+    };
 
-    const newColumns = [costColumnName, quantityColumnName];
-    newColumns.forEach((column, idx) => {
-        const colIndex = insertIndex + idx;
-        for (let row = 1; row <= mainSheet.rowCount; row++) {
-            const cell = mainSheet.getCell(row, colIndex);
-            cell.border = {
-                top: { style: borderStyle.top.style },
-                left: { style: borderStyle.left.style },
-                bottom: { style: borderStyle.bottom.style },
-                right: { style: borderStyle.right.style },
-            };
+    function calculateColumnWidth(sheet, col) {
+        let maxWidth = 10;
+        for (let row = 1; row <= sheet.rowCount; row++) {
+            const cellValue = sheet.getCell(row, col).value;
+            const cellWidth = cellValue ? String(cellValue).length : 0;
+            maxWidth = Math.max(maxWidth, cellWidth);
         }
-    });
+        return maxWidth + 1;
+    }
+
+    for (let row = 1; row <= mainSheet.rowCount; row++) {
+        mainSheet.getRow(row).height = row === 1 ? headerRowHeight : defaultRowHeight;
+
+        for (let col = 1; col <= mainSheet.columnCount; col++) {
+            mainSheet.getColumn(col).width = col === 2 ? 40 : calculateColumnWidth(mainSheet, col);
+            const cell = mainSheet.getCell(row, col);
+            cell.style = {};
+
+            if (cell.row === 1) {
+                cell.fill = null;
+                cell.fill = headerFill;
+            }
+
+            cell.numFmt = cell.col === 1 ? textFormat : format;
+            cell.border = borderStyle;
+        }
+    }
 
     const mainData = mainSheet.getSheetValues().slice(2);
     const avrData = avrSheet.getSheetValues().slice(2);
@@ -95,18 +122,14 @@ async function processExcelFiles(mainFile, avrFile) {
 
     mainData.forEach((row, index) => {
         const avrRow = avrMap.get(row[2]);
-        if (avrRow) {
-            mainSheet.getCell(index + 2, insertIndex).value = avrRow[4];
-        }
+        const cell = mainSheet.getCell(index + 2, insertIndex);
+            cell.value = avrRow ? avrRow[4] : 0;
     });
 
     for (let row = 2; row <= mainData.length + 1; row++) {
         const lastColumnIndex = mainSheet.columnCount;
         const penultimateColumnIndex = lastColumnIndex - 1;
-        const costCompletedColumnIndex = lastColumnIndex - 3;
         const penultimateColumnLetter = String.fromCharCode(64 + penultimateColumnIndex);
-        const costCompletedColumnLetter = String.fromCharCode(64 + costCompletedColumnIndex);
-        console.log("costCompletedColumnLetter:", costCompletedColumnLetter);
 
         const columnLetterInsertIndexMinus1 = String.fromCharCode(65 + insertIndex - 1);
         const columnLetterInsertIndexPlus1 = String.fromCharCode(65 + insertIndex + 1);

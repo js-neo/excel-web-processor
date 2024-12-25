@@ -59,6 +59,12 @@ Excel Web Processor — это веб-приложение, которое по�
 
 [Excel Web Processor](https://js-neo.github.io/excel-web-processor/)
 
+## Ссылки для скачивания тестовых файлов
+
+- Основной файл сводной таблицы: [Книга_test_file.xlsx](https://github.com/js-neo/excel-web-processor/raw/refs/heads/main/test_files/Книга_test_file.xlsx)
+- Файл АВР: [АВР 1.xlsx](https://github.com/js-neo/excel-web-processor/raw/refs/heads/main/test_files/АВР%201.xlsx)
+
+
 ## Технологии
 
 - HTML

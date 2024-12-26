@@ -41,30 +41,39 @@ avrFileInput.addEventListener('change', function(event) {
     handleFileSelect(setAvrFilePath)(event);
 });
 
-
 processFilesButton.addEventListener('click', async () => {
     if (mainFilePath && avrFilePath) {
-        outputDiv.innerHTML = '<div class="processing-message">Идет обработка файлов...</div>';
+        outputDiv.innerHTML = '<div class="processing-message">Идет обработка файлов.</div>';
         document.getElementById('timer').style.display = 'block';
 
         const startTime = Date.now();
+        let dotCount = 1;
+        const maxDots = 5;
 
         const timerInterval = setInterval(() => {
             const elapsedTime = ((Date.now() - startTime) / 1000).toFixed(2);
             document.getElementById('timerValue').innerText = elapsedTime;
         }, 100);
 
+        const messageInterval = setInterval(() => {
+            const dots = '.'.repeat(dotCount);
+            outputDiv.querySelector('.processing-message').textContent = `Идет обработка файлов${dots}`;
+            dotCount = (dotCount % maxDots) + 1;
+        }, 500);
+
         try {
             const processedData = await processExcelFiles(mainFilePath, avrFilePath);
             await saveFile(processedData);
             const endTime = Date.now();
             clearInterval(timerInterval);
+            clearInterval(messageInterval);
             const duration = ((endTime - startTime) / 1000).toFixed(2);
             outputDiv.innerHTML = `<div class="success-message">Файлы успешно обработаны! 
 Время выполнения: ${duration} секунд.</div>`;
             document.getElementById('timer').style.display = 'none';
         } catch (error) {
             clearInterval(timerInterval);
+            clearInterval(messageInterval);
             outputDiv.innerHTML = `<div class="error-message">Ошибка обработки файлов: ${error.message}. 
 Пожалуйста, попробуйте снова.</div>`;
         } finally {
@@ -74,6 +83,7 @@ processFilesButton.addEventListener('click', async () => {
         alert('Пожалуйста, выберите оба файла.');
     }
 });
+
 
 async function processExcelFiles(mainFile, avrFile) {
     const mainWorkbook = new ExcelJS.Workbook();

@@ -24,14 +24,17 @@ const setAvrFilePath = (file) => {
     avrFilePath = file;
 };
 
+outputDiv.innerHTML = '<div class="info-message">Пожалуйста, загрузите основной файл сводной таблицы и файл АВР, ' +
+    'затем нажмите кнопку "Обработать файлы".</div>';
+
 selectMainFile.addEventListener('change', handleFileSelect(setMainFilePath));
 selectAvrFile.addEventListener('change', handleFileSelect(setAvrFilePath));
 
 processFilesButton.addEventListener('click', async () => {
     if (mainFilePath && avrFilePath) {
+        outputDiv.innerHTML = '<div class="processing-message">Идет обработка файлов...</div>';
         document.getElementById('loader').style.display = 'block';
         document.getElementById('timer').style.display = 'block';
-        outputDiv.innerHTML = '';
 
         const startTime = Date.now();
 
@@ -46,10 +49,13 @@ processFilesButton.addEventListener('click', async () => {
             const endTime = Date.now();
             clearInterval(timerInterval);
             const duration = ((endTime - startTime) / 1000).toFixed(2);
-            outputDiv.innerHTML = `<div class="success-message">Файлы успешно обработаны! Время выполнения: ${duration} секунд.</div>`;
+            outputDiv.innerHTML = `<div class="success-message">Файлы успешно обработаны! 
+Время выполнения: ${duration} секунд.</div>`;
+            document.getElementById('timer').style.display = 'none';
         } catch (error) {
             clearInterval(timerInterval);
-            outputDiv.innerHTML = `<div class="error-message">Ошибка обработки файлов: ${error.message}. Пожалуйста, попробуйте снова.</div>`;
+            outputDiv.innerHTML = `<div class="error-message">Ошибка обработки файлов: ${error.message}. 
+Пожалуйста, попробуйте снова.</div>`;
         } finally {
             document.getElementById('loader').style.display = 'none';
         }

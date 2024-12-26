@@ -16,17 +16,35 @@ button {
     border-radius: 5px;
 }
 
+.info-message {
+    color: #1976D2;
+    background-color: #E3F2FD;
+    padding: 10px;
+    border: 1px solid #1976D2;
+    border-radius: 5px;
+    margin-bottom: 10px;
+}
+
+.processing-message {
+    color: #FFA000;
+    background-color: #FFF3E0;
+    padding: 10px;
+    border: 1px solid #FFA000;
+    border-radius: 5px;
+    margin-bottom: 10px;
+}
+
 .success-message {
-    color: #4CAF50; /* Зеленый цвет для успеха */
-    background-color: #E8F5E9; /* Светлый зеленый фон */
+    color: #4CAF50;
+    background-color: #E8F5E9;
     padding: 10px;
     border: 1px solid #4CAF50;
     border-radius: 5px;
 }
 
 .error-message {
-    color: #F44336; /* Красный цвет для ошибок */
-    background-color: #FFEBEE; /* Светлый красный фон */
+    color: #F44336;
+    background-color: #FFEBEE;
     padding: 10px;
     border: 1px solid #F44336;
     border-radius: 5px;
@@ -36,12 +54,7 @@ button {
     margin-top: 10px;
     font-size: 16px;
     font-weight: bold;
-    color: #1976D2; /* Синий цвет для таймера */
+    color: #1976D2;
+    display: none;
 }
 
-#loader {
-    margin-top: 20px;
-    font-size: 18px;
-    color: #007BFF;
-    font-weight: bold;
-}

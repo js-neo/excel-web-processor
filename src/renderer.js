@@ -14,6 +14,7 @@ const avrFileName = document.getElementById('avrFileName');
 
 const handleFileSelect = (setFilePath) => (event) => {
     const file = event.target.files[0];
+    console.log("file: ", file);
     if (file) {
         setFilePath(file);
     }
@@ -30,20 +31,20 @@ const setAvrFilePath = (file) => {
 outputDiv.innerHTML = '<div class="info-message">Пожалуйста, загрузите основной файл сводной таблицы и файл АВР, ' +
     'затем нажмите кнопку "Обработать файлы".</div>';
 
-mainFileInput.addEventListener('change', function() {
+mainFileInput.addEventListener('change', function(event) {
     mainFileName.textContent = this.files.length > 0 ? this.files[0].name : '';
-    handleFileSelect(setMainFilePath);
+    handleFileSelect(setMainFilePath)(event);
 });
 
-avrFileInput.addEventListener('change', function() {
+avrFileInput.addEventListener('change', function(event) {
     avrFileName.textContent = this.files.length > 0 ? this.files[0].name : '';
-    handleFileSelect(setAvrFilePath);
+    handleFileSelect(setAvrFilePath)(event);
 });
+
 
 processFilesButton.addEventListener('click', async () => {
     if (mainFilePath && avrFilePath) {
         outputDiv.innerHTML = '<div class="processing-message">Идет обработка файлов...</div>';
-        document.getElementById('loader').style.display = 'block';
         document.getElementById('timer').style.display = 'block';
 
         const startTime = Date.now();
@@ -67,7 +68,7 @@ processFilesButton.addEventListener('click', async () => {
             outputDiv.innerHTML = `<div class="error-message">Ошибка обработки файлов: ${error.message}. 
 Пожалуйста, попробуйте снова.</div>`;
         } finally {
-            document.getElementById('loader').style.display = 'none';
+            document.getElementById('timer').style.display = 'none';
         }
     } else {
         alert('Пожалуйста, выберите оба файла.');

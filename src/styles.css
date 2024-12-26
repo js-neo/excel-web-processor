@@ -2,14 +2,46 @@ body {
     font-family: Arial, sans-serif;
     margin: 20px;
 }
+
 button {
     margin: 5px;
     padding: 10px 15px;
     font-size: 16px;
 }
+
 #output {
     margin-top: 20px;
     padding: 10px;
     border: 1px solid #ccc;
-    min-height: 50px;
+    border-radius: 5px;
+}
+
+.success-message {
+    color: #4CAF50; /* Зеленый цвет для успеха */
+    background-color: #E8F5E9; /* Светлый зеленый фон */
+    padding: 10px;
+    border: 1px solid #4CAF50;
+    border-radius: 5px;
+}
+
+.error-message {
+    color: #F44336; /* Красный цвет для ошибок */
+    background-color: #FFEBEE; /* Светлый красный фон */
+    padding: 10px;
+    border: 1px solid #F44336;
+    border-radius: 5px;
+}
+
+#timer {
+    margin-top: 10px;
+    font-size: 16px;
+    font-weight: bold;
+    color: #1976D2; /* Синий цвет для таймера */
+}
+
+#loader {
+    margin-top: 20px;
+    font-size: 18px;
+    color: #007BFF;
+    font-weight: bold;
 }

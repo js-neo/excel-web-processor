@@ -4,7 +4,6 @@ import ExcelJS from 'exceljs';
 let mainFilePath = '';
 let avrFilePath = '';
 
-// Получаем элементы
 const mainFileInput = document.getElementById('selectMainFile');
 const avrFileInput = document.getElementById('selectAvrFile');
 const processFilesButton = document.getElementById('processFilesButton');
@@ -189,8 +188,10 @@ async function processExcelFiles(mainFile, avrFile) {
 
     const lastColumnIndex = mainSheet.columnCount;
     if (lastColumnIndex > 0) {
-        const penultimateColumnIndex = lastColumnIndex - 2;
+        const penultimateColumnIndex = lastColumnIndex - 1;
+        const trackingColumnIndex = lastColumnIndex - 2;
         const penultimateColumnLetter = getColumnLetter(penultimateColumnIndex);
+        const trackingColumnLetter = getColumnLetter(trackingColumnIndex);
 
         for (let row = 2; row <= mainData.length + 1; row++) {
             const columnLetterInsertIndexMinus1 = getColumnLetter(insertIndex);
@@ -217,8 +218,8 @@ async function processExcelFiles(mainFile, avrFile) {
             mainSheet.getCell(row, insertIndex + 6).value = { formula: excessFormula };
         }
 
-        const formula_Tomato = `=$${penultimateColumnLetter}2<0`;
-        const formula_PastelGreen = `=AND(NOT(ISBLANK($${penultimateColumnLetter}2)),$${penultimateColumnLetter}2=0)`;
+        const formula_Tomato = `=$${trackingColumnLetter}2<0`;
+        const formula_PastelGreen = `=AND(NOT(ISBLANK($${trackingColumnLetter}2)),$${trackingColumnLetter}2=0)`;
 
         try {
             const rangeRef = `A2:${getColumnLetter(lastColumnIndex)}${mainSheet.rowCount}`;

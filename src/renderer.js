@@ -4,10 +4,13 @@ import ExcelJS from 'exceljs';
 let mainFilePath = '';
 let avrFilePath = '';
 
-const selectMainFile = document.getElementById('selectMainFile');
-const selectAvrFile = document.getElementById('selectAvrFile');
+// Получаем элементы
+const mainFileInput = document.getElementById('selectMainFile');
+const avrFileInput = document.getElementById('selectAvrFile');
 const processFilesButton = document.getElementById('processFilesButton');
 const outputDiv = document.getElementById('output');
+const mainFileName = document.getElementById('mainFileName');
+const avrFileName = document.getElementById('avrFileName');
 
 const handleFileSelect = (setFilePath) => (event) => {
     const file = event.target.files[0];
@@ -27,8 +30,15 @@ const setAvrFilePath = (file) => {
 outputDiv.innerHTML = '<div class="info-message">Пожалуйста, загрузите основной файл сводной таблицы и файл АВР, ' +
     'затем нажмите кнопку "Обработать файлы".</div>';
 
-selectMainFile.addEventListener('change', handleFileSelect(setMainFilePath));
-selectAvrFile.addEventListener('change', handleFileSelect(setAvrFilePath));
+mainFileInput.addEventListener('change', function() {
+    mainFileName.textContent = this.files.length > 0 ? this.files[0].name : '';
+    handleFileSelect(setMainFilePath);
+});
+
+avrFileInput.addEventListener('change', function() {
+    avrFileName.textContent = this.files.length > 0 ? this.files[0].name : '';
+    handleFileSelect(setAvrFilePath);
+});
 
 processFilesButton.addEventListener('click', async () => {
     if (mainFilePath && avrFilePath) {
@@ -231,8 +241,8 @@ async function processExcelFiles(mainFile, avrFile) {
                 ]
             });
         } catch (error) {
+            console.error('Ошибка при добавлении условного форматирования:', error);
         }
-    } else {
     }
     return await mainWorkbook.xlsx.writeBuffer();
 }

@@ -79,9 +79,9 @@ button:hover {
 }
 
 .processing-message {
-    color: #FFA000;
+    color: #FF9800;
     background-color: #FFF3E0;
-    border: 1px solid #FFA000;
+    border: 1px solid #FF9800;
 }
 
 .success-message {

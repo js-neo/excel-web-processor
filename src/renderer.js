@@ -50,8 +50,8 @@ processFilesButton.addEventListener('click', async () => {
         const maxDots = 5;
 
         const timerInterval = setInterval(() => {
-            const elapsedTime = ((Date.now() - startTime) / 1000).toFixed(2);
-            document.getElementById('timerValue').innerText = elapsedTime;
+            document.getElementById('timerValue').innerText =
+                ((Date.now() - startTime) / 1000).toFixed(2);
         }, 100);
 
         const messageInterval = setInterval(() => {
@@ -118,9 +118,6 @@ async function processExcelFiles(mainFile, avrFile) {
         mainSheet.spliceColumns(insertIndex + (costExists ? 1 : 0), 0, [quantityColumnName]);
     }
 
-    const defaultRowHeight = 14;
-    const headerRowHeight = defaultRowHeight * 2;
-
     const textFormat = '@';
     const format = `_-* #,##0.00_-;_-* "-" #,##0.00_-;_-* "-"??_-;_-@_-`;
     const borderStyle = {
@@ -135,37 +132,53 @@ async function processExcelFiles(mainFile, avrFile) {
         fgColor: { argb: 'FFE3F2FD' }
     };
 
-    function calculateColumnWidth(sheet, col) {
-        let maxWidth = 10;
-        for (let row = 1; row <= sheet.rowCount; row++) {
-            const cellValue = sheet.getCell(row, col).value;
-            const cellWidth = cellValue ? String(cellValue).length : 0;
-            maxWidth = Math.max(maxWidth, cellWidth);
-        }
-        return maxWidth + 1;
-    }
+    const rowHeight = 14;
+    const headerRowHeight = rowHeight * 2;
+    const maxColumnWidths = new Array(mainSheet.columnCount).fill(0);
 
     for (let row = 1; row <= mainSheet.rowCount; row++) {
         await new Promise((resolve) => {
             setTimeout(() => {
-                mainSheet.getRow(row).height = row === 1 ? headerRowHeight : defaultRowHeight;
+
+                let maxHeight = rowHeight;
 
                 for (let col = 1; col <= mainSheet.columnCount; col++) {
-                    mainSheet.getColumn(col).width = col === 2 ? 40 : calculateColumnWidth(mainSheet, col);
                     const cell = mainSheet.getCell(row, col);
+                    const cellValue = cell.value;
+
+                    const cellWidth = cellValue ? String(cellValue).length : 0;
+                    maxColumnWidths[col - 1] = Math.max(maxColumnWidths[col - 1], cellWidth);
+
                     cell.style = {};
 
-                    if (cell.row === 1) {
+                    if (row === 1) {
                         cell.fill = headerFill;
                     }
 
-                    cell.numFmt = cell.col === 1 ? textFormat : format;
+                    if (col === 2 && cellValue) {
+                        const numberOfLines = Math.ceil(String(cellValue).length / 50);
+                        const cellHeight = numberOfLines * rowHeight;
+                        maxHeight = Math.max(maxHeight, cellHeight);
+                        cell.alignment = { wrapText: true };
+                    }
+
+
+
+                    cell.numFmt = col === 1 ? textFormat : format;
                     cell.border = borderStyle;
                 }
+
+                mainSheet.getRow(row).height = row === 1 ? headerRowHeight : maxHeight;
                 resolve();
             }, 0);
         });
     }
+
+    for (let col = 1; col <= mainSheet.columnCount; col++) {
+        mainSheet.getColumn(col).width = col === 2 ? 50 : maxColumnWidths[col - 1] + 2;
+    }
+
+
 
     const mainData = mainSheet.getSheetValues().slice(2);
     const avrData = avrSheet.getSheetValues().slice(2);

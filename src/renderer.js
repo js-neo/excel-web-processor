@@ -136,6 +136,40 @@ async function processExcelFiles(mainFile, avrFile) {
     const headerRowHeight = rowHeight * 2;
     const maxColumnWidths = new Array(mainSheet.columnCount).fill(0);
 
+    function calculateCellWidth(value, font) {
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d');
+        context.font = `${font.size}px ${font.name}`;
+        const metrics = context.measureText(value);
+        const scaleFactor = 0.24;
+        return Math.round(metrics.width * scaleFactor);
+    }
+
+    const headerStyle = {
+        font: {
+            name: 'Times New Roman',
+            size: 10,
+            bold: true
+        },
+        alignment: {
+            horizontal: 'center',
+            vertical: 'middle',
+            wrapText: true
+        },
+        fill: headerFill
+    };
+
+    const contentStyle = {
+        font: {
+            name: 'Arial',
+            size: 9,
+            bold: false
+        },
+        alignment: {
+            wrapText: true
+        }
+    };
+
     for (let row = 1; row <= mainSheet.rowCount; row++) {
         await new Promise((resolve) => {
             setTimeout(() => {
@@ -146,16 +180,23 @@ async function processExcelFiles(mainFile, avrFile) {
                     const cell = mainSheet.getCell(row, col);
                     const cellValue = cell.value;
 
-                    const cellWidth = cellValue ? String(cellValue).length : 0;
+                    let cellWidth = 0;
+                    const font = row === 1 ? headerStyle.font : contentStyle.font;
+                    if (cellValue) {
+                        cellWidth = calculateCellWidth(String(cellValue), font);
+                    }
                     const maxCellWidth = col === 2 ? 50 : 15;
                     const effectiveCellWidth = Math.min(cellWidth, maxCellWidth);
                     maxColumnWidths[col - 1] = Math.max(maxColumnWidths[col - 1], effectiveCellWidth);
 
+                    console.log(`Row: ${row}, Col: ${col}, CellValue: ${cellValue}, CellWidth: ${cellWidth}, EffectiveCellWidth: ${effectiveCellWidth}`);
+
                     cell.style = {};
-                    cell.alignment = { wrapText: true };
 
                     if (row === 1) {
-                        cell.fill = headerFill;
+                        cell.style = headerStyle;
+                    } else {
+                        cell.style = contentStyle;
                     }
 
                     if (cellValue) {
@@ -176,9 +217,9 @@ async function processExcelFiles(mainFile, avrFile) {
             }, 0);
         });
     }
-
+    console.log("maxColumnWidths: ", maxColumnWidths);
     for (let col = 1; col <= mainSheet.columnCount; col++) {
-        mainSheet.getColumn(col).width = maxColumnWidths[col - 1] + 1;
+        mainSheet.getColumn(col).width = maxColumnWidths[col - 1];
     }
 
 

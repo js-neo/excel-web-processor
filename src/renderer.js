@@ -147,19 +147,22 @@ async function processExcelFiles(mainFile, avrFile) {
                     const cellValue = cell.value;
 
                     const cellWidth = cellValue ? String(cellValue).length : 0;
-                    maxColumnWidths[col - 1] = Math.max(maxColumnWidths[col - 1], cellWidth);
+                    const maxCellWidth = col === 2 ? 50 : 15;
+                    const effectiveCellWidth = Math.min(cellWidth, maxCellWidth);
+                    maxColumnWidths[col - 1] = Math.max(maxColumnWidths[col - 1], effectiveCellWidth);
 
                     cell.style = {};
+                    cell.alignment = { wrapText: true };
 
                     if (row === 1) {
                         cell.fill = headerFill;
                     }
 
-                    if (col === 2 && cellValue) {
-                        const numberOfLines = Math.ceil(String(cellValue).length / 50);
+                    if (cellValue) {
+                        const numberOfLines = Math.ceil(String(cellValue).length / maxCellWidth);
                         const cellHeight = numberOfLines * rowHeight;
                         maxHeight = Math.max(maxHeight, cellHeight);
-                        cell.alignment = { wrapText: true };
+
                     }
 
 
@@ -175,7 +178,7 @@ async function processExcelFiles(mainFile, avrFile) {
     }
 
     for (let col = 1; col <= mainSheet.columnCount; col++) {
-        mainSheet.getColumn(col).width = col === 2 ? 50 : maxColumnWidths[col - 1] + 2;
+        mainSheet.getColumn(col).width = maxColumnWidths[col - 1] + 1;
     }
 
 

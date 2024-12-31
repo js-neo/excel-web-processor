@@ -3,6 +3,7 @@ import ExcelJS from 'exceljs';
 
 let mainFilePath = '';
 let avrFilePath = '';
+let processColNum = 1;
 
 const mainFileInput = document.getElementById('selectMainFile');
 const avrFileInput = document.getElementById('selectAvrFile');
@@ -10,6 +11,7 @@ const processFilesButton = document.getElementById('processFilesButton');
 const outputDiv = document.getElementById('output');
 const mainFileName = document.getElementById('mainFileName');
 const avrFileName = document.getElementById('avrFileName');
+const processColumnNumber = document.getElementById('processColumnNumber');
 
 const handleFileSelect = (setFilePath) => (event) => {
     const file = event.target.files[0];
@@ -26,6 +28,15 @@ const setMainFilePath = (file) => {
 const setAvrFilePath = (file) => {
     avrFilePath = file;
 };
+
+const handleProcessColumnNumber = ({target}) => {
+    if (target.value > 0 && target.value <= 5) {
+        processColNum = target.value;
+    } else {
+        processColNum = 1;
+        target.value = processColNum;
+    }
+}
 
 outputDiv.innerHTML = '<div class="info-message">Пожалуйста, загрузите основной файл сводной таблицы и файл АВР, ' +
     'затем нажмите кнопку "Обработать файлы".</div>';
@@ -82,6 +93,8 @@ processFilesButton.addEventListener('click', async () => {
         alert('Пожалуйста, выберите оба файла.');
     }
 });
+
+processColumnNumber.addEventListener('change', handleProcessColumnNumber);
 
 
 async function processExcelFiles(mainFile, avrFile) {
@@ -226,9 +239,9 @@ async function processExcelFiles(mainFile, avrFile) {
 
     const mainData = mainSheet.getSheetValues().slice(2);
     const avrData = avrSheet.getSheetValues().slice(2);
-    const avrMap = new Map(avrData.map(row => [row[1], row]));
+    const avrMap = new Map(avrData.map(row => [row[processColNum], row]));
     mainData.forEach((row, index) => {
-        const avrRow = avrMap.get(row[1]);
+        const avrRow = avrMap.get(row[processColNum]);
         const cell = mainSheet.getCell(index + 2, insertIndex);
         cell.value = avrRow ? avrRow[4] : 0;
     });

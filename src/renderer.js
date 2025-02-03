@@ -15,7 +15,6 @@ const processColumnNumber = document.getElementById('processColumnNumber');
 
 const handleFileSelect = (setFilePath) => (event) => {
     const file = event.target.files[0];
-    console.log("file: ", file);
     if (file) {
         setFilePath(file);
     }
@@ -41,12 +40,12 @@ const handleProcessColumnNumber = ({target}) => {
 outputDiv.innerHTML = '<div class="info-message">Пожалуйста, загрузите основной файл сводной таблицы и файл АВР, ' +
     'затем нажмите кнопку "Обработать файлы".</div>';
 
-mainFileInput.addEventListener('change', function(event) {
+mainFileInput.addEventListener('change', function (event) {
     mainFileName.textContent = this.files.length > 0 ? this.files[0].name : '';
     handleFileSelect(setMainFilePath)(event);
 });
 
-avrFileInput.addEventListener('change', function(event) {
+avrFileInput.addEventListener('change', function (event) {
     avrFileName.textContent = this.files.length > 0 ? this.files[0].name : '';
     handleFileSelect(setAvrFilePath)(event);
 });
@@ -134,15 +133,21 @@ async function processExcelFiles(mainFile, avrFile) {
     const textFormat = '@';
     const format = `_-* #,##0.00_-;_-* "-" #,##0.00_-;_-* "-"??_-;_-@_-`;
     const borderStyle = {
-        top: { style: 'thin' },
-        left: { style: 'thin' },
-        bottom: { style: 'thin' },
-        right: { style: 'thin' },
+        top: {style: 'thin'},
+        left: {style: 'thin'},
+        bottom: {style: 'thin'},
+        right: {style: 'thin'},
     };
     const headerFill = {
         type: 'pattern',
         pattern: 'solid',
-        fgColor: { argb: 'FFE3F2FD' }
+        fgColor: {argb: 'FFE3F2FD'}
+    };
+
+    const footerFill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: {argb: 'FFFFC107'}
     };
 
     const rowHeight = 14;
@@ -183,6 +188,20 @@ async function processExcelFiles(mainFile, avrFile) {
         }
     };
 
+    const footerStyle = {
+        font: {
+            name: 'Times New Roman',
+            size: 10,
+            bold: true
+        },
+        alignment: {
+            horizontal: 'center',
+            vertical: 'middle',
+            wrapText: true
+        },
+        fill: footerFill
+    };
+
     for (let row = 1; row <= mainSheet.rowCount; row++) {
         await new Promise((resolve) => {
             setTimeout(() => {
@@ -202,7 +221,7 @@ async function processExcelFiles(mainFile, avrFile) {
                     const effectiveCellWidth = Math.min(cellWidth, maxCellWidth);
                     maxColumnWidths[col - 1] = Math.max(maxColumnWidths[col - 1], effectiveCellWidth);
 
-                    console.log(`Row: ${row}, Col: ${col}, CellValue: ${cellValue}, CellWidth: ${cellWidth}, EffectiveCellWidth: ${effectiveCellWidth}`);
+                    // console.log(`Row: ${row}, Col: ${col}, CellValue: ${cellValue}, CellWidth: ${cellWidth}, EffectiveCellWidth: ${effectiveCellWidth}`);
 
                     cell.style = {};
 
@@ -219,8 +238,6 @@ async function processExcelFiles(mainFile, avrFile) {
 
                     }
 
-
-
                     cell.numFmt = col === 1 ? textFormat : format;
                     cell.border = borderStyle;
                 }
@@ -230,11 +247,9 @@ async function processExcelFiles(mainFile, avrFile) {
             }, 0);
         });
     }
-    console.log("maxColumnWidths: ", maxColumnWidths);
     for (let col = 1; col <= mainSheet.columnCount; col++) {
         mainSheet.getColumn(col).width = maxColumnWidths[col - 1];
     }
-
 
 
     const mainData = mainSheet.getSheetValues().slice(2);
@@ -242,9 +257,39 @@ async function processExcelFiles(mainFile, avrFile) {
     const avrMap = new Map(avrData.map(row => [row[processColNum], row]));
     mainData.forEach((row, index) => {
         const avrRow = avrMap.get(row[processColNum]);
+        console.log("avrRow: ", avrRow);
         const cell = mainSheet.getCell(index + 2, insertIndex);
         cell.value = avrRow ? avrRow[4] : 0;
     });
+
+    const lastRow = mainSheet.rowCount;
+    const lastRowCellValue = mainSheet.getCell(lastRow, 2).value;
+
+
+    if (lastRowCellValue !== "Всего:") {
+        mainSheet.addRow(['', 'Всего:']);
+        const newRowIndex = lastRow + 1;
+
+        for (let col = 1; col <= mainSheet.columnCount; col++) {
+            const cell = mainSheet.getCell(newRowIndex, col);
+            cell.style = footerStyle;
+            cell.border = borderStyle;
+            cell.numFmt = col === 1 ? textFormat : format;
+        }
+
+        const avrColumnOffset = 1;
+        const completedColumnOffset = 3;
+        const remainingColumnOffset = 5;
+        const excessColumnOffset = 6;
+
+        const costColumnIndex = (i) => insertIndex + i;
+        const sumFormula = (num) => `SUM(${getColumnLetter(costColumnIndex(num))}2:${getColumnLetter(costColumnIndex(num))}${newRowIndex - 1})`;
+        mainSheet.getCell(`F${newRowIndex}`).value = {formula: `SUM(F2:F${newRowIndex - 1})`};
+        mainSheet.getCell(newRowIndex, costColumnIndex(avrColumnOffset)).value = {formula: sumFormula(avrColumnOffset)};
+        mainSheet.getCell(newRowIndex, costColumnIndex(completedColumnOffset)).value = {formula: sumFormula(completedColumnOffset)};
+        mainSheet.getCell(newRowIndex, costColumnIndex(remainingColumnOffset)).value = {formula: sumFormula(remainingColumnOffset)};
+        mainSheet.getCell(newRowIndex, costColumnIndex(excessColumnOffset)).value = {formula: sumFormula(excessColumnOffset)};
+    }
 
     function getColumnLetter(columnIndex) {
         let letter = '';
@@ -279,13 +324,13 @@ async function processExcelFiles(mainFile, avrFile) {
             const remainingCostFormula = `${columnLetterInsertIndexPlus3}${row} * E${row}`;
             const excessFormula = `IF(${penultimateColumnLetter}${row}<0, ABS(${penultimateColumnLetter}${row}), 0)`;
 
-            mainSheet.getCell(`F${row}`).value = { formula: totalCostFormula };
-            mainSheet.getCell(row, insertIndex + 1).value = { formula: avrCostFormula };
+            mainSheet.getCell(`F${row}`).value = {formula: totalCostFormula};
+            mainSheet.getCell(row, insertIndex + 1).value = {formula: avrCostFormula};
             mainSheet.getCell(row, insertIndex + 2).value = totalValue;
-            mainSheet.getCell(row, insertIndex + 3).value = { formula: completedCostFormula };
-            mainSheet.getCell(row, insertIndex + 4).value = { formula: quantityRemainingFormula };
-            mainSheet.getCell(row, insertIndex + 5).value = { formula: remainingCostFormula };
-            mainSheet.getCell(row, insertIndex + 6).value = { formula: excessFormula };
+            mainSheet.getCell(row, insertIndex + 3).value = {formula: completedCostFormula};
+            mainSheet.getCell(row, insertIndex + 4).value = {formula: quantityRemainingFormula};
+            mainSheet.getCell(row, insertIndex + 5).value = {formula: remainingCostFormula};
+            mainSheet.getCell(row, insertIndex + 6).value = {formula: excessFormula};
         }
 
         const formula_Tomato = `=$${trackingColumnLetter}2<0`;
@@ -305,7 +350,7 @@ async function processExcelFiles(mainFile, avrFile) {
                             fill: {
                                 type: 'pattern',
                                 pattern: 'solid',
-                                bgColor: { argb: 'FFFF6347' }
+                                bgColor: {argb: 'FFFF6347'}
                             }
                         }
                     },
@@ -316,7 +361,7 @@ async function processExcelFiles(mainFile, avrFile) {
                             fill: {
                                 type: 'pattern',
                                 pattern: 'solid',
-                                bgColor: { argb: 'C8FFC8' }
+                                bgColor: {argb: 'C8FFC8'}
                             }
                         }
                     }
@@ -330,7 +375,7 @@ async function processExcelFiles(mainFile, avrFile) {
 }
 
 async function saveFile(data) {
-    const blob = new Blob([data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const blob = new Blob([data], {type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
     const url = URL.createObjectURL(blob);
 
     const a = document.createElement('a');

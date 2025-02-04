@@ -130,6 +130,94 @@ async function processExcelFiles(mainFile, avrFile) {
         mainSheet.spliceColumns(insertIndex + (costExists ? 1 : 0), 0, [quantityColumnName]);
     }
 
+    const mainKeys = new Set(
+        mainSheet.getSheetValues()
+            .slice(2)
+            .map(row => row[processColNum]?.trim())
+    );
+
+    const avrKeys = new Set(
+        avrSheet.getSheetValues()
+            .slice(2)
+            .map(row => row[processColNum]?.trim())
+    );
+
+    const allKeys = [...new Set([...mainKeys, ...avrKeys])]
+        .filter(key => key !== undefined)
+        .sort((a, b) => {
+            const aParts = a.split('.').map(Number);
+            const bParts = b.split('.').map(Number);
+
+            for (let i = 0; i < Math.max(aParts.length, bParts.length); i++) {
+                const aPart = aParts[i] || 0;
+                const bPart = bParts[i] || 0;
+
+                if (aPart !== bPart) {
+                    return aPart - bPart;
+                }
+            }
+            return 0;
+        });
+
+
+
+    const newTable = [];
+    const avrMap = new Map(
+        avrSheet.getSheetValues()
+            .slice(2)
+            .map(row => [row[processColNum]?.trim(), row])
+    );
+
+
+    allKeys.forEach(key => {
+        const mainRow = mainSheet.getSheetValues()
+            .slice(2)
+            .find(row => row[processColNum]?.trim() === key);
+
+        if (mainRow) {
+            newTable.push(mainRow);
+        } else {
+            const avrRow = avrMap.get(key);
+            const newRow = new Array(mainSheet.columnCount).fill(null);
+            newRow[processColNum - 1]  = key;
+            newRow[processColNum] = avrRow[2];
+            newRow[3] = 0;
+            newRow[4] = avrRow ? avrRow[5] : 0;
+            newTable.push(newRow);
+        }
+    });
+
+    while (mainSheet.rowCount > 1) {
+        mainSheet.spliceRows(2, 1);
+    }
+
+    const remainingRows = mainSheet.getSheetValues().length - 2;
+
+    if (remainingRows > 0) {
+        console.error(`Ошибка: осталось ${remainingRows} строк в mainSheet.`);
+    } else {
+        newTable.forEach(row => {
+            mainSheet.addRow(row);
+        });
+    }
+
+    const totalColumns = mainSheet.columnCount;
+
+    if (totalColumns >= 15) {
+        const startColumn = 8;
+        const endColumn = totalColumns - 7;
+
+        for (let row = 2; row <= mainSheet.rowCount; row++) {
+            for (let col = startColumn; col <= endColumn; col += 2) {
+                const previousCellAddress = getColumnLetter(col - 1) + row;
+                const formula = `=E${row}*${previousCellAddress}`;
+
+                mainSheet.getCell(row, col).value = { formula: formula };
+            }
+        }
+    }
+
+
     const textFormat = '@';
     const format = `_-* #,##0.00_-;_-* "-" #,##0.00_-;_-* "-"??_-;_-@_-`;
     const borderStyle = {
@@ -203,6 +291,7 @@ async function processExcelFiles(mainFile, avrFile) {
     };
 
     for (let row = 1; row <= mainSheet.rowCount; row++) {
+
         await new Promise((resolve) => {
             setTimeout(() => {
 
@@ -221,7 +310,6 @@ async function processExcelFiles(mainFile, avrFile) {
                     const effectiveCellWidth = Math.min(cellWidth, maxCellWidth);
                     maxColumnWidths[col - 1] = Math.max(maxColumnWidths[col - 1], effectiveCellWidth);
 
-                    // console.log(`Row: ${row}, Col: ${col}, CellValue: ${cellValue}, CellWidth: ${cellWidth}, EffectiveCellWidth: ${effectiveCellWidth}`);
 
                     cell.style = {};
 
@@ -253,11 +341,9 @@ async function processExcelFiles(mainFile, avrFile) {
 
 
     const mainData = mainSheet.getSheetValues().slice(2);
-    const avrData = avrSheet.getSheetValues().slice(2);
-    const avrMap = new Map(avrData.map(row => [row[processColNum], row]));
+
     mainData.forEach((row, index) => {
         const avrRow = avrMap.get(row[processColNum]);
-        console.log("avrRow: ", avrRow);
         const cell = mainSheet.getCell(index + 2, insertIndex);
         cell.value = avrRow ? avrRow[4] : 0;
     });
@@ -268,10 +354,10 @@ async function processExcelFiles(mainFile, avrFile) {
 
     if (lastRowCellValue !== "Всего:") {
         mainSheet.addRow(['', 'Всего:']);
-        const newRowIndex = lastRow + 1;
+        const newLastRowIndex = lastRow + 1;
 
         for (let col = 1; col <= mainSheet.columnCount; col++) {
-            const cell = mainSheet.getCell(newRowIndex, col);
+            const cell = mainSheet.getCell(newLastRowIndex, col);
             cell.style = footerStyle;
             cell.border = borderStyle;
             cell.numFmt = col === 1 ? textFormat : format;
@@ -283,12 +369,12 @@ async function processExcelFiles(mainFile, avrFile) {
         const excessColumnOffset = 6;
 
         const costColumnIndex = (i) => insertIndex + i;
-        const sumFormula = (num) => `SUM(${getColumnLetter(costColumnIndex(num))}2:${getColumnLetter(costColumnIndex(num))}${newRowIndex - 1})`;
-        mainSheet.getCell(`F${newRowIndex}`).value = {formula: `SUM(F2:F${newRowIndex - 1})`};
-        mainSheet.getCell(newRowIndex, costColumnIndex(avrColumnOffset)).value = {formula: sumFormula(avrColumnOffset)};
-        mainSheet.getCell(newRowIndex, costColumnIndex(completedColumnOffset)).value = {formula: sumFormula(completedColumnOffset)};
-        mainSheet.getCell(newRowIndex, costColumnIndex(remainingColumnOffset)).value = {formula: sumFormula(remainingColumnOffset)};
-        mainSheet.getCell(newRowIndex, costColumnIndex(excessColumnOffset)).value = {formula: sumFormula(excessColumnOffset)};
+        const sumFormula = (num) => `SUM(${getColumnLetter(costColumnIndex(num))}2:${getColumnLetter(costColumnIndex(num))}${newLastRowIndex - 1})`;
+        mainSheet.getCell(`F${newLastRowIndex}`).value = {formula: `SUM(F2:F${newLastRowIndex - 1})`};
+        mainSheet.getCell(newLastRowIndex, costColumnIndex(avrColumnOffset)).value = {formula: sumFormula(avrColumnOffset)};
+        mainSheet.getCell(newLastRowIndex, costColumnIndex(completedColumnOffset)).value = {formula: sumFormula(completedColumnOffset)};
+        mainSheet.getCell(newLastRowIndex, costColumnIndex(remainingColumnOffset)).value = {formula: sumFormula(remainingColumnOffset)};
+        mainSheet.getCell(newLastRowIndex, costColumnIndex(excessColumnOffset)).value = {formula: sumFormula(excessColumnOffset)};
     }
 
     function getColumnLetter(columnIndex) {

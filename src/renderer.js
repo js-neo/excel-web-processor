@@ -145,19 +145,35 @@ async function processExcelFiles(mainFile, avrFile) {
     const allKeys = [...new Set([...mainKeys, ...avrKeys])]
         .filter(key => key !== undefined)
         .sort((a, b) => {
-            const aParts = a.split('.').map(Number);
-            const bParts = b.split('.').map(Number);
+            const splitRegex = /(\d+([.,]\d+)?)|([^0-9]+)/g;
+
+            const getParts = (str) =>
+                str.match(splitRegex)?.filter(x => x !== undefined && x !== '') || [];
+
+            const aParts = getParts(a);
+            const bParts = getParts(b);
 
             for (let i = 0; i < Math.max(aParts.length, bParts.length); i++) {
-                const aPart = aParts[i] || 0;
-                const bPart = bParts[i] || 0;
+                const aPart = aParts[i] || '';
+                const bPart = bParts[i] || '';
 
-                if (aPart !== bPart) {
-                    return aPart - bPart;
+                const aIsNum = /^\d+([.,]\d+)?$/.test(aPart);
+                const bIsNum = /^\d+([.,]\d+)?$/.test(bPart);
+
+                if (aIsNum && bIsNum) {
+                    const aNum = parseFloat(aPart.replace(',', '.'));
+                    const bNum = parseFloat(bPart.replace(',', '.'));
+                    if (aNum !== bNum) return aNum - bNum;
+                } else if (aIsNum !== bIsNum) {
+                    return aIsNum ? -1 : 1;
+                } else {
+                    const diff = aPart.localeCompare(bPart, undefined, { sensitivity: 'base' });
+                    if (diff !== 0) return diff;
                 }
             }
             return 0;
         });
+
 
 
 
@@ -169,23 +185,40 @@ async function processExcelFiles(mainFile, avrFile) {
     );
 
 
+    const mainValues = mainSheet.getSheetValues().slice(2);
+
     allKeys.forEach(key => {
-        const mainRow = mainSheet.getSheetValues()
-            .slice(2)
-            .find(row => row[processColNum]?.trim() === key);
+        const mainRow = mainValues.find(row => row[processColNum]?.trim() === key);
 
         if (mainRow) {
             newTable.push(mainRow);
         } else {
             const avrRow = avrMap.get(key);
             const newRow = new Array(mainSheet.columnCount).fill(null);
-            newRow[processColNum - 1]  = key;
-            newRow[processColNum] = avrRow[2];
-            newRow[3] = 0;
-            newRow[4] = avrRow ? avrRow[5] : 0;
+
+            if (avrRow) {
+                console.log("processColNum: ", processColNum);
+                console.log("typeof processColNum: ", typeof processColNum);
+                console.log("Number(processColNum) === 2: ", Number(processColNum) === 2);
+                if (Number(processColNum) === 1) {
+                    newRow[processColNum - 1] = key;
+                    newRow[1] = avrRow[2];
+                } else if (Number(processColNum) === 2) {
+                    newRow[0] = avrRow[1];
+                    newRow[processColNum - 1] = key;
+                }
+
+                newRow[2] = avrRow[3];
+                newRow[3] = 0;
+                newRow[4] = avrRow[5];
+            } else {
+                newRow[4] = 0;
+            }
+
             newTable.push(newRow);
         }
     });
+
 
     while (mainSheet.rowCount > 1) {
         mainSheet.spliceRows(2, 1);

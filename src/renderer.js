@@ -106,13 +106,14 @@ async function processExcelFiles(mainFile, avrFile) {
     const avrSheet = avrWorkbook.worksheets[0];
 
     const avrFileName = avrFile.name.replace('.xlsx', '');
-    const quantityColumnName = `Количество ${avrFileName}`;
-    const costColumnName = `Стоимость ${avrFileName}`;
+    const quantityColumnName = `${avrFileName} кол-во`;
+    const costColumnName = `${avrFileName} сумма`;
 
     const insertIndex = mainSheet.columnCount - 4;
 
     let quantityExists = false;
     let costExists = false;
+
 
     for (let col = 1; col <= mainSheet.columnCount; col++) {
         const headerCell = mainSheet.getCell(1, col);
@@ -122,24 +123,26 @@ async function processExcelFiles(mainFile, avrFile) {
         if (header === costColumnName) costExists = true;
     }
 
-    if (!costExists) {
-        mainSheet.spliceColumns(insertIndex, 0, [costColumnName]);
+    if (!costExists && !quantityExists) {
+        mainSheet.spliceColumns(insertIndex, 0, [quantityColumnName], [costColumnName]);
     }
 
-    if (!quantityExists) {
-        mainSheet.spliceColumns(insertIndex + (costExists ? 1 : 0), 0, [quantityColumnName]);
+
+    const footerSecondCell = mainSheet.getCell(mainSheet.rowCount, 2);
+    if (footerSecondCell.value === "Всего:") {
+        mainSheet.spliceRows(mainSheet.rowCount, 1);
     }
 
     const mainKeys = new Set(
         mainSheet.getSheetValues()
             .slice(2)
-            .map(row => row[processColNum]?.trim())
+            .map(row => String(row[processColNum] || "").trim())
     );
 
     const avrKeys = new Set(
         avrSheet.getSheetValues()
             .slice(2)
-            .map(row => row[processColNum]?.trim())
+            .map(row => String(row[processColNum] || "").trim())
     );
 
     const allKeys = [...new Set([...mainKeys, ...avrKeys])]
@@ -188,7 +191,8 @@ async function processExcelFiles(mainFile, avrFile) {
     const mainValues = mainSheet.getSheetValues().slice(2);
 
     allKeys.forEach(key => {
-        const mainRow = mainValues.find(row => row[processColNum]?.trim() === key);
+        const mainRow = mainValues.find(row =>
+            String(row[processColNum]).trim() === String(key).trim());
 
         if (mainRow) {
             newTable.push(mainRow);
@@ -197,15 +201,12 @@ async function processExcelFiles(mainFile, avrFile) {
             const newRow = new Array(mainSheet.columnCount).fill(null);
 
             if (avrRow) {
-                console.log("processColNum: ", processColNum);
-                console.log("typeof processColNum: ", typeof processColNum);
-                console.log("Number(processColNum) === 2: ", Number(processColNum) === 2);
                 if (Number(processColNum) === 1) {
-                    newRow[processColNum - 1] = key;
-                    newRow[1] = avrRow[2];
+                    newRow[0] = String(key);
+                    newRow[1] = avrRow?.[2] || "";
                 } else if (Number(processColNum) === 2) {
-                    newRow[0] = avrRow[1];
-                    newRow[processColNum - 1] = key;
+                    newRow[0] = avrRow?.[1] || "";
+                    newRow[1] = String(key);
                 }
 
                 newRow[2] = avrRow[3];
@@ -262,7 +263,7 @@ async function processExcelFiles(mainFile, avrFile) {
     const headerFill = {
         type: 'pattern',
         pattern: 'solid',
-        fgColor: {argb: 'FFE3F2FD'}
+        fgColor: {argb: 'FF87CEEB'}
     };
 
     const footerFill = {
@@ -323,51 +324,54 @@ async function processExcelFiles(mainFile, avrFile) {
         fill: footerFill
     };
 
-    for (let row = 1; row <= mainSheet.rowCount; row++) {
+    const CHUNK_SIZE = 10;
+    const totalRows = mainSheet.rowCount;
 
-        await new Promise((resolve) => {
-            setTimeout(() => {
+    for (let i = 1; i <= totalRows; i += CHUNK_SIZE) {
+        await new Promise(resolve => setTimeout(resolve, 0));
 
-                let maxHeight = rowHeight;
+        const endRow = Math.min(i + CHUNK_SIZE - 1, totalRows);
+        for (let row = i; row <= endRow; row++) {
+            let maxHeight = rowHeight;
 
-                for (let col = 1; col <= mainSheet.columnCount; col++) {
-                    const cell = mainSheet.getCell(row, col);
-                    const cellValue = cell.value;
+            for (let col = 1; col <= mainSheet.columnCount; col++) {
+                const cell = mainSheet.getCell(row, col);
+                const cellValue = cell.value;
 
-                    let cellWidth = 0;
-                    const font = row === 1 ? headerStyle.font : contentStyle.font;
-                    if (cellValue) {
-                        cellWidth = calculateCellWidth(String(cellValue), font);
-                    }
-                    const maxCellWidth = col === 2 ? 50 : 15;
-                    const effectiveCellWidth = Math.min(cellWidth, maxCellWidth);
-                    maxColumnWidths[col - 1] = Math.max(maxColumnWidths[col - 1], effectiveCellWidth);
-
-
-                    cell.style = {};
-
-                    if (row === 1) {
-                        cell.style = headerStyle;
-                    } else {
-                        cell.style = contentStyle;
-                    }
-
-                    if (cellValue) {
-                        const numberOfLines = Math.ceil(String(cellValue).length / maxCellWidth);
-                        const cellHeight = numberOfLines * rowHeight;
-                        maxHeight = Math.max(maxHeight, cellHeight);
-
-                    }
-
-                    cell.numFmt = col === 1 ? textFormat : format;
-                    cell.border = borderStyle;
+                if (col === 1 && row > 1) {
+                    cell.value = String(cell.value).trim();
                 }
 
-                mainSheet.getRow(row).height = row === 1 ? headerRowHeight : maxHeight;
-                resolve();
-            }, 0);
-        });
+                cell.style = {};
+
+                let cellWidth = 0;
+                const font = row === 1 ? headerStyle.font : contentStyle.font;
+
+                if (row === 1) {
+                    cell.style = headerStyle;
+                } else {
+                    cell.style = contentStyle;
+                }
+                cell.numFmt = col === 1 ? textFormat : format;
+                cell.border = borderStyle;
+                if (cellValue) {
+                    cellWidth = calculateCellWidth(String(cellValue), font);
+                }
+                const maxCellWidth = col === 2 ? 50 : 15;
+                const effectiveCellWidth = Math.min(cellWidth, maxCellWidth);
+                maxColumnWidths[col - 1] = Math.max(maxColumnWidths[col - 1], effectiveCellWidth);
+
+                if (cellValue) {
+                    const numberOfLines = Math.ceil(String(cellValue).length / maxCellWidth);
+                    const cellHeight = numberOfLines * rowHeight;
+                    maxHeight = Math.max(maxHeight, cellHeight);
+                }
+            }
+
+            mainSheet.getRow(row).height = row === 1 ? headerRowHeight : maxHeight;
+        }
     }
+
     for (let col = 1; col <= mainSheet.columnCount; col++) {
         mainSheet.getColumn(col).width = maxColumnWidths[col - 1];
     }
@@ -433,7 +437,7 @@ async function processExcelFiles(mainFile, avrFile) {
             const columnLetterInsertIndexPlus3 = getColumnLetter(insertIndex + 4);
 
             const prevValue = mainSheet.getCell(`${columnLetterInsertIndexMinus1}${row}`).value;
-            const curResult = mainSheet.getCell(`${columnLetterInsertIndexPlus1}${row}`).result;
+            const curResult = mainSheet.getCell(`${columnLetterInsertIndexPlus1}${row}`).value;
             const totalValue = curResult ? prevValue + curResult : prevValue;
 
             const totalCostFormula = `D${row} * E${row}`;

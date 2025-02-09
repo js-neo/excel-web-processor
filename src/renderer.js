@@ -119,6 +119,103 @@ async function processExcelFiles(mainFile, avrFile) {
   const CHUNK_SIZE = 10;
   const STANDARD_DPI = 96;
   const BASE_SCALE_FACTOR = 400;
+  const NAME_COLUMN_WIDTH = 50;
+  const BASE_COLUMN_WIDTH = 15;
+
+  const textFormat = "@";
+  const format = `_-* #,##0.00_-;_-* "-" #,##0.00_-;_-* "-"??_-;_-@_-`;
+  const borderStyle = {
+    top: { style: "thin" },
+    left: { style: "thin" },
+    bottom: { style: "thin" },
+    right: { style: "thin" },
+  };
+  const headerFill = {
+    type: "pattern",
+    pattern: "solid",
+    fgColor: { argb: "FF87CEEB" },
+  };
+
+  const footerFill = {
+    type: "pattern",
+    pattern: "solid",
+    fgColor: { argb: "FFFFC107" },
+  };
+
+  const rowHeight = 14;
+  const headerRowHeight = rowHeight * 2;
+
+  const sheetStyle = {
+    headerStyle: {
+      font: {
+        name: "Times New Roman",
+        size: 11,
+        bold: true,
+      },
+      alignment: {
+        horizontal: "center",
+        vertical: "middle",
+        wrapText: true,
+      },
+      fill: headerFill,
+      border: borderStyle,
+      numFmt: textFormat,
+    },
+    contentTextStyle: {
+      font: {
+        name: "Arial",
+        size: 9,
+        bold: false,
+      },
+      alignment: {
+        wrapText: true,
+      },
+      border: borderStyle,
+      numFmt: textFormat,
+    },
+    contentStyle: {
+      font: {
+        name: "Arial",
+        size: 9,
+        bold: false,
+      },
+      alignment: {
+        wrapText: true,
+      },
+      border: borderStyle,
+      numFmt: format,
+    },
+    footerTextStyle: {
+      font: {
+        name: "Times New Roman",
+        size: 10,
+        bold: true,
+      },
+      alignment: {
+        horizontal: "center",
+        vertical: "middle",
+        wrapText: true,
+      },
+      fill: footerFill,
+      border: borderStyle,
+      numFmt: textFormat,
+    },
+    footerStyle: {
+      font: {
+        name: "Times New Roman",
+        size: 10,
+        bold: true,
+      },
+      alignment: {
+        horizontal: "center",
+        vertical: "middle",
+        wrapText: true,
+      },
+      fill: footerFill,
+      border: borderStyle,
+      numFmt: format,
+    },
+  };
 
   let quantityExists = false;
   let costExists = false;
@@ -288,101 +385,6 @@ async function processExcelFiles(mainFile, avrFile) {
 
   const totalRows = mainSheet.rowCount;
 
-  const textFormat = "@";
-  const format = `_-* #,##0.00_-;_-* "-" #,##0.00_-;_-* "-"??_-;_-@_-`;
-  const borderStyle = {
-    top: { style: "thin" },
-    left: { style: "thin" },
-    bottom: { style: "thin" },
-    right: { style: "thin" },
-  };
-  const headerFill = {
-    type: "pattern",
-    pattern: "solid",
-    fgColor: { argb: "FF87CEEB" },
-  };
-
-  const footerFill = {
-    type: "pattern",
-    pattern: "solid",
-    fgColor: { argb: "FFFFC107" },
-  };
-
-  const rowHeight = 14;
-  const headerRowHeight = rowHeight * 2;
-
-  const sheetStyle = {
-    headerStyle: {
-      font: {
-        name: "Times New Roman",
-        size: 11,
-        bold: true,
-      },
-      alignment: {
-        horizontal: "center",
-        vertical: "middle",
-        wrapText: true,
-      },
-      fill: headerFill,
-      border: borderStyle,
-      numFmt: textFormat,
-    },
-    contentTextStyle: {
-      font: {
-        name: "Arial",
-        size: 9,
-        bold: false,
-      },
-      alignment: {
-        wrapText: true,
-      },
-      border: borderStyle,
-      numFmt: textFormat,
-    },
-    contentStyle: {
-      font: {
-        name: "Arial",
-        size: 9,
-        bold: false,
-      },
-      alignment: {
-        wrapText: true,
-      },
-      border: borderStyle,
-      numFmt: format,
-    },
-    footerTextStyle: {
-      font: {
-        name: "Times New Roman",
-        size: 10,
-        bold: true,
-      },
-      alignment: {
-        horizontal: "center",
-        vertical: "middle",
-        wrapText: true,
-      },
-      fill: footerFill,
-      border: borderStyle,
-      numFmt: textFormat,
-    },
-    footerStyle: {
-      font: {
-        name: "Times New Roman",
-        size: 10,
-        bold: true,
-      },
-      alignment: {
-        horizontal: "center",
-        vertical: "middle",
-        wrapText: true,
-      },
-      fill: footerFill,
-      border: borderStyle,
-      numFmt: format,
-    },
-  };
-
   for (let i = 1; i <= totalRows; i += CHUNK_SIZE) {
     await new Promise((resolve) => setTimeout(resolve, 0));
 
@@ -417,7 +419,8 @@ async function processExcelFiles(mainFile, avrFile) {
         if (cellValue) {
           cellWidth = calculateCellWidth(String(cellValue), font);
         }
-        const maxCellWidth = col === 2 ? 50 : 15;
+
+        const maxCellWidth = col === 2 ? NAME_COLUMN_WIDTH : BASE_COLUMN_WIDTH;
         const effectiveCellWidth = Math.min(cellWidth, maxCellWidth);
         maxColumnWidths[col - 1] = Math.max(
           maxColumnWidths[col - 1],

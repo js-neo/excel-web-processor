@@ -123,68 +123,6 @@ async function processExcelFiles(mainFile, avrFile) {
   let quantityExists = false;
   let costExists = false;
 
-  const textFormat = "@";
-  const format = `_-* #,##0.00_-;_-* "-" #,##0.00_-;_-* "-"??_-;_-@_-`;
-  const borderStyle = {
-    top: { style: "thin" },
-    left: { style: "thin" },
-    bottom: { style: "thin" },
-    right: { style: "thin" },
-  };
-  const headerFill = {
-    type: "pattern",
-    pattern: "solid",
-    fgColor: { argb: "FF87CEEB" },
-  };
-
-  const footerFill = {
-    type: "pattern",
-    pattern: "solid",
-    fgColor: { argb: "FFFFC107" },
-  };
-
-  const rowHeight = 14;
-  const headerRowHeight = rowHeight * 2;
-
-  const headerStyle = {
-    font: {
-      name: "Times New Roman",
-      size: 10,
-      bold: true,
-    },
-    alignment: {
-      horizontal: "center",
-      vertical: "middle",
-      wrapText: true,
-    },
-    fill: headerFill,
-  };
-
-  const contentStyle = {
-    font: {
-      name: "Arial",
-      size: 9,
-      bold: false,
-    },
-    alignment: {
-      wrapText: true,
-    },
-  };
-
-  const footerStyle = {
-    font: {
-      name: "Times New Roman",
-      size: 10,
-      bold: true,
-    },
-    alignment: {
-      horizontal: "center",
-      vertical: "middle",
-      wrapText: true,
-    },
-    fill: footerFill,
-  };
-
   function getColumnLetter(columnIndex) {
     let letter = "";
     while (columnIndex > 0) {
@@ -207,7 +145,7 @@ async function processExcelFiles(mainFile, avrFile) {
 
   for (let col = 1; col <= mainSheet.columnCount; col++) {
     const headerCell = mainSheet.getCell(1, col);
-    const header = headerCell.value;
+    const header = String(headerCell.value).trim();
 
     if (header === quantityColumnName) quantityExists = true;
     if (header === costColumnName) costExists = true;
@@ -350,6 +288,101 @@ async function processExcelFiles(mainFile, avrFile) {
 
   const totalRows = mainSheet.rowCount;
 
+  const textFormat = "@";
+  const format = `_-* #,##0.00_-;_-* "-" #,##0.00_-;_-* "-"??_-;_-@_-`;
+  const borderStyle = {
+    top: { style: "thin" },
+    left: { style: "thin" },
+    bottom: { style: "thin" },
+    right: { style: "thin" },
+  };
+  const headerFill = {
+    type: "pattern",
+    pattern: "solid",
+    fgColor: { argb: "FF87CEEB" },
+  };
+
+  const footerFill = {
+    type: "pattern",
+    pattern: "solid",
+    fgColor: { argb: "FFFFC107" },
+  };
+
+  const rowHeight = 14;
+  const headerRowHeight = rowHeight * 2;
+
+  const sheetStyle = {
+    headerStyle: {
+      font: {
+        name: "Times New Roman",
+        size: 11,
+        bold: true,
+      },
+      alignment: {
+        horizontal: "center",
+        vertical: "middle",
+        wrapText: true,
+      },
+      fill: headerFill,
+      border: borderStyle,
+      numFmt: textFormat,
+    },
+    contentTextStyle: {
+      font: {
+        name: "Arial",
+        size: 9,
+        bold: false,
+      },
+      alignment: {
+        wrapText: true,
+      },
+      border: borderStyle,
+      numFmt: textFormat,
+    },
+    contentStyle: {
+      font: {
+        name: "Arial",
+        size: 9,
+        bold: false,
+      },
+      alignment: {
+        wrapText: true,
+      },
+      border: borderStyle,
+      numFmt: format,
+    },
+    footerTextStyle: {
+      font: {
+        name: "Times New Roman",
+        size: 10,
+        bold: true,
+      },
+      alignment: {
+        horizontal: "center",
+        vertical: "middle",
+        wrapText: true,
+      },
+      fill: footerFill,
+      border: borderStyle,
+      numFmt: textFormat,
+    },
+    footerStyle: {
+      font: {
+        name: "Times New Roman",
+        size: 10,
+        bold: true,
+      },
+      alignment: {
+        horizontal: "center",
+        vertical: "middle",
+        wrapText: true,
+      },
+      fill: footerFill,
+      border: borderStyle,
+      numFmt: format,
+    },
+  };
+
   for (let i = 1; i <= totalRows; i += CHUNK_SIZE) {
     await new Promise((resolve) => setTimeout(resolve, 0));
 
@@ -361,22 +394,26 @@ async function processExcelFiles(mainFile, avrFile) {
         const cell = mainSheet.getCell(row, col);
         const cellValue = cell.value;
 
-        if (col === 1 && row > 1) {
+        if ((col === 1 || col === 2) && row > 0) {
           cell.value = String(cell.value).trim();
         }
 
         cell.style = {};
+        if (row === 1) {
+          cell.style = sheetStyle.headerStyle;
+        } else {
+          cell.style =
+            col === 1 || col === 2 || col === 3
+              ? sheetStyle.contentTextStyle
+              : sheetStyle.contentStyle;
+        }
 
         let cellWidth = 0;
-        const font = row === 1 ? headerStyle.font : contentStyle.font;
+        const font =
+          row === 1
+            ? sheetStyle.headerStyle.font
+            : sheetStyle.contentStyle.font;
 
-        if (row === 1) {
-          cell.style = headerStyle;
-        } else {
-          cell.style = contentStyle;
-        }
-        cell.numFmt = col === 1 ? textFormat : format;
-        cell.border = borderStyle;
         if (cellValue) {
           cellWidth = calculateCellWidth(String(cellValue), font);
         }
@@ -421,9 +458,8 @@ async function processExcelFiles(mainFile, avrFile) {
 
     for (let col = 1; col <= mainSheet.columnCount; col++) {
       const cell = mainSheet.getCell(newLastRowIndex, col);
-      cell.style = footerStyle;
-      cell.border = borderStyle;
-      cell.numFmt = col === 1 ? textFormat : format;
+      cell.style =
+        col === 1 ? sheetStyle.footerTextStyle : sheetStyle.footerStyle;
     }
 
     const avrColumnOffset = 1;

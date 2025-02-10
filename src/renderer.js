@@ -109,6 +109,8 @@ async function processExcelFiles(mainFile, avrFile) {
   await avrWorkbook.xlsx.load(await avrFile.arrayBuffer());
   const avrSheet = avrWorkbook.worksheets[0];
 
+  console.log("avrSheet: ", avrSheet.getSheetValues());
+
   const avrFileName = avrFile.name.replace(".xlsx", "");
   const quantityColumnName = `${avrFileName} кол-во`;
   const costColumnName = `${avrFileName} сумма`;
@@ -465,32 +467,41 @@ async function processExcelFiles(mainFile, avrFile) {
         col === 1 ? sheetStyle.footerTextStyle : sheetStyle.footerStyle;
     }
 
-    const avrColumnOffset = 1;
-    const completedColumnOffset = 3;
-    const remainingColumnOffset = 5;
-    const excessColumnOffset = 6;
+    // const insertIndex = mainSheet.columnCount - 4;
+    const newAvrColumnOffset = 1;
+    const completedAmountOffset = 3;
+    const remainingAmountOffset = 5;
+    const excessAmountOffset = 6;
 
     const costColumnIndex = (i) => insertIndex + i;
     const sumFormula = (num) =>
       `SUM(${getColumnLetter(costColumnIndex(num))}2:${getColumnLetter(costColumnIndex(num))}${newLastRowIndex - 1})`;
+    const sumIfFormula = (num) =>
+      `SUMIF(${getColumnLetter(costColumnIndex(num))}2:${getColumnLetter(costColumnIndex(num))}${newLastRowIndex - 1},">0")`;
+
     mainSheet.getCell(`F${newLastRowIndex}`).value = {
       formula: `SUM(F2:F${newLastRowIndex - 1})`,
     };
-    mainSheet.getCell(newLastRowIndex, costColumnIndex(avrColumnOffset)).value =
-      { formula: sumFormula(avrColumnOffset) };
     mainSheet.getCell(
       newLastRowIndex,
-      costColumnIndex(completedColumnOffset),
-    ).value = { formula: sumFormula(completedColumnOffset) };
+      costColumnIndex(newAvrColumnOffset),
+    ).value = { formula: sumFormula(newAvrColumnOffset) };
     mainSheet.getCell(
       newLastRowIndex,
-      costColumnIndex(remainingColumnOffset),
-    ).value = { formula: sumFormula(remainingColumnOffset) };
+      costColumnIndex(completedAmountOffset),
+    ).value = { formula: sumFormula(completedAmountOffset) };
     mainSheet.getCell(
       newLastRowIndex,
-      costColumnIndex(excessColumnOffset),
-    ).value = { formula: sumFormula(excessColumnOffset) };
+      costColumnIndex(remainingAmountOffset),
+    ).value = { formula: sumIfFormula(remainingAmountOffset) };
+    mainSheet.getCell(
+      newLastRowIndex,
+      costColumnIndex(excessAmountOffset),
+    ).value = { formula: sumFormula(excessAmountOffset) };
   }
+
+  // const BASE_COLUMN_COUNT = 11;
+  // const QUANTITY_COLUMNS_COUNT = 2;
 
   const calculateTotalQuantity = (rowIndex) => {
     const quantityColumnCount =

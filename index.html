@@ -1,36 +1,51 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ru">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Загрузка файлов</title>
-</head>
-<body>
-<div class="container">
-  <h1>Выберите файлы Excel</h1>
-  <div class="file-inputs">
-    <label for="selectMainFile">Сводная таблица:</label>
-    <input type="file" id="selectMainFile" accept=".xlsx">
-  </div>
-  <div class="selected_docs"><span class="selected_docs-title">Выбрана сводная таблица:</span>
-    <span id="mainFileName" class="selected_docs-description"></span></div>
-  <div class="file-inputs">
-    <label for="selectAvrFile">Акт ВР:</label>
-    <input type="file" id="selectAvrFile" accept=".xlsx">
-  </div>
-  <div class="selected_docs"><span class="selected_docs-title">Выбран Акт ВР:</span>
-    <span id="avrFileName" class="selected_docs-description"></span></div>
-  <div>
-    <label for="processColumnNumber">Выберите номер колонки для обработки данных:</label>
-    <select id="processColumnNumber">
-      <option value="1">1</option>
-      <option value="2">2</option>
-    </select>
-  </div>
-  <button id="processFilesButton">Обработать файлы</button>
-  <div id="output"></div>
-  <div id="timer">Время выполнения: <span id="timerValue">0</span> секунд</div>
-</div>
-<script src="dist/bundle.js"></script>
-</body>
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Загрузка файлов</title>
+    </head>
+    <body>
+        <div class="container">
+            <h1>Выберите файлы Excel</h1>
+            <div class="file-inputs">
+                <label for="selectMainFile">Сводная таблица:</label>
+                <input type="file" id="selectMainFile" accept=".xlsx" />
+            </div>
+            <div class="selected_docs">
+                <span class="selected_docs-title"
+                    >Выбрана сводная таблица:</span
+                >
+                <span
+                    id="mainFileName"
+                    class="selected_docs-description"
+                ></span>
+            </div>
+            <div class="file-inputs">
+                <label for="selectAvrFile">Акт ВР:</label>
+                <input type="file" id="selectAvrFile" accept=".xlsx" />
+            </div>
+            <div class="selected_docs">
+                <span class="selected_docs-title">Выбран Акт ВР:</span>
+                <span id="avrFileName" class="selected_docs-description"></span>
+            </div>
+            <div>
+                <label for="processColumnNumber"
+                    >Выберите номер колонки для обработки данных:</label
+                >
+                <select id="processColumnNumber">
+                    <option value="1">1</option>
+                    <option value="2">2</option>
+                </select>
+            </div>
+            <button id="processFilesButton">Обработать файлы</button>
+            <div id="output"></div>
+            <div id="timer">
+                Время выполнения:
+                <span id="timerValue">0</span>
+                секунд
+            </div>
+        </div>
+        <script type="module" src="dist/bundle.js"></script>
+    </body>
 </html>

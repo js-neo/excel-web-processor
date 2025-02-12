@@ -28,7 +28,7 @@ const setAvrFilePath = (file) => {
     avrFilePath = file;
 };
 
-const handleProcessColumnNumber = ({target}) => {
+const handleProcessColumnNumber = ({ target }) => {
     if (target.value > 0 && target.value <= 5) {
         processColNum = target.value;
     } else {
@@ -76,7 +76,10 @@ processFilesButton.addEventListener("click", async () => {
         }, 500);
 
         try {
-            const processedData = await processExcelFiles(mainFilePath, avrFilePath);
+            const processedData = await processExcelFiles(
+                mainFilePath,
+                avrFilePath
+            );
             await saveFile(processedData);
             const endTime = Date.now();
             clearInterval(timerInterval);
@@ -129,21 +132,33 @@ async function processExcelFiles(mainFile, avrFile) {
     const textFormat = "@";
     const format = `_-* #,##0.00_-;_-* "-" #,##0.00_-;_-* "-"??_-;_-@_-`;
     const borderStyle = {
-        top: {style: "thin"},
-        left: {style: "thin"},
-        bottom: {style: "thin"},
-        right: {style: "thin"},
+        top: {
+            style: "thin"
+        },
+        left: {
+            style: "thin"
+        },
+        bottom: {
+            style: "thin"
+        },
+        right: {
+            style: "thin"
+        }
     };
     const headerFill = {
         type: "pattern",
         pattern: "solid",
-        fgColor: {argb: "FFD2EBFA"},
+        fgColor: {
+            argb: "FFD2EBFA"
+        }
     };
 
     const footerFill = {
         type: "pattern",
         pattern: "solid",
-        fgColor: {argb: "FFFFC107"},
+        fgColor: {
+            argb: "FF8CBAD"
+        }
     };
 
     const rowHeight = 14;
@@ -154,73 +169,73 @@ async function processExcelFiles(mainFile, avrFile) {
             font: {
                 name: "Times New Roman",
                 size: 11,
-                bold: true,
+                bold: true
             },
             alignment: {
                 horizontal: "center",
                 vertical: "middle",
-                wrapText: true,
+                wrapText: true
             },
             fill: headerFill,
             border: borderStyle,
-            numFmt: textFormat,
+            numFmt: textFormat
         },
         contentTextStyle: {
             font: {
                 name: "Arial",
                 size: 9,
-                bold: false,
+                bold: false
             },
             alignment: {
                 horizontal: "center",
                 vertical: "middle",
-                wrapText: true,
+                wrapText: true
             },
             border: borderStyle,
-            numFmt: textFormat,
+            numFmt: textFormat
         },
         contentStyle: {
             font: {
                 name: "Arial",
                 size: 9,
-                bold: false,
+                bold: false
             },
             alignment: {
-                wrapText: true,
+                wrapText: true
             },
             border: borderStyle,
-            numFmt: format,
+            numFmt: format
         },
         footerTextStyle: {
             font: {
                 name: "Times New Roman",
                 size: 10,
-                bold: true,
+                bold: true
             },
             alignment: {
                 horizontal: "center",
                 vertical: "middle",
-                wrapText: true,
+                wrapText: true
             },
             fill: footerFill,
             border: borderStyle,
-            numFmt: textFormat,
+            numFmt: textFormat
         },
         footerStyle: {
             font: {
                 name: "Times New Roman",
                 size: 10,
-                bold: true,
+                bold: true
             },
             alignment: {
                 horizontal: "center",
                 vertical: "middle",
-                wrapText: true,
+                wrapText: true
             },
             fill: footerFill,
             border: borderStyle,
-            numFmt: format,
-        },
+            numFmt: format
+        }
     };
 
     let quantityExists = false;
@@ -257,7 +272,7 @@ async function processExcelFiles(mainFile, avrFile) {
             insertIndex,
             0,
             [quantityColumnName],
-            [costColumnName],
+            [costColumnName]
         );
     }
 
@@ -270,14 +285,14 @@ async function processExcelFiles(mainFile, avrFile) {
         mainSheet
             .getSheetValues()
             .slice(2)
-            .map((row) => String(row[processColNum] || "").trim()),
+            .map((row) => String(row[processColNum] || "").trim())
     );
 
     const avrKeys = new Set(
         avrSheet
             .getSheetValues()
             .slice(2)
-            .map((row) => String(row[processColNum] || "").trim()),
+            .map((row) => String(row[processColNum] || "").trim())
     );
 
     const allKeys = [...new Set([...mainKeys, ...avrKeys])]
@@ -286,7 +301,9 @@ async function processExcelFiles(mainFile, avrFile) {
             const splitRegex = /(\d+([.,]\d+)?)|([^0-9]+)/g;
 
             const getParts = (str) =>
-                str.match(splitRegex)?.filter((x) => x !== undefined && x !== "") || [];
+                str
+                    .match(splitRegex)
+                    ?.filter((x) => x !== undefined && x !== "") || [];
 
             const aParts = getParts(a);
             const bParts = getParts(b);
@@ -306,7 +323,7 @@ async function processExcelFiles(mainFile, avrFile) {
                     return aIsNum ? -1 : 1;
                 } else {
                     const diff = aPart.localeCompare(bPart, undefined, {
-                        sensitivity: "base",
+                        sensitivity: "base"
                     });
                     if (diff !== 0) return diff;
                 }
@@ -319,14 +336,14 @@ async function processExcelFiles(mainFile, avrFile) {
         avrSheet
             .getSheetValues()
             .slice(2)
-            .map((row) => [row[processColNum]?.trim(), row]),
+            .map((row) => [row[processColNum]?.trim(), row])
     );
 
     const mainValues = mainSheet.getSheetValues().slice(2);
 
     allKeys.forEach((key) => {
         const mainRow = mainValues.find(
-            (row) => String(row[processColNum]).trim() === String(key).trim(),
+            (row) => String(row[processColNum]).trim() === String(key).trim()
         );
 
         if (mainRow) {
@@ -381,7 +398,9 @@ async function processExcelFiles(mainFile, avrFile) {
                 const previousCellAddress = getColumnLetter(col - 1) + row;
                 const formula = `=E${row}*${previousCellAddress}`;
 
-                mainSheet.getCell(row, col).value = {formula: formula};
+                mainSheet.getCell(row, col).value = {
+                    formula: formula
+                };
             }
         }
     }
@@ -410,7 +429,9 @@ async function processExcelFiles(mainFile, avrFile) {
                     cell.style = sheetStyle.headerStyle;
                 } else {
                     cell.style =
-                        col === 1 ? sheetStyle.contentTextStyle : sheetStyle.contentStyle;
+                        col === 1
+                            ? sheetStyle.contentTextStyle
+                            : sheetStyle.contentStyle;
                 }
 
                 let cellWidth = 0;
@@ -422,31 +443,35 @@ async function processExcelFiles(mainFile, avrFile) {
                 if (cellValue) {
                     if (typeof cellValue === "number") {
                         cellWidth =
-                            calculateCellWidth(String(cellValue.toFixed(2)), font) +
-                            EXTRA_WIDTH_FOR_NUMERIC;
+                            calculateCellWidth(
+                                String(cellValue.toFixed(2)),
+                                font
+                            ) + EXTRA_WIDTH_FOR_NUMERIC;
                     } else {
                         cellWidth = calculateCellWidth(String(cellValue), font);
                     }
                 }
 
-                const maxCellWidth = col === 2 ? NAME_COLUMN_WIDTH : BASE_COLUMN_WIDTH;
+                const maxCellWidth =
+                    col === 2 ? NAME_COLUMN_WIDTH : BASE_COLUMN_WIDTH;
                 const effectiveCellWidth = Math.min(cellWidth, maxCellWidth);
 
                 maxColumnWidths[col - 1] = Math.max(
                     maxColumnWidths[col - 1],
-                    effectiveCellWidth,
+                    effectiveCellWidth
                 );
 
                 if (cellValue) {
                     const numberOfLines = Math.ceil(
-                        String(cellValue).length / maxCellWidth,
+                        String(cellValue).length / maxCellWidth
                     );
                     const cellHeight = numberOfLines * rowHeight;
                     maxHeight = Math.max(maxHeight, cellHeight);
                 }
             }
 
-            mainSheet.getRow(row).height = row === 1 ? headerRowHeight : maxHeight;
+            mainSheet.getRow(row).height =
+                row === 1 ? headerRowHeight : maxHeight;
         }
     }
 
@@ -491,23 +516,41 @@ async function processExcelFiles(mainFile, avrFile) {
 
             for (let col = startColumn; col <= endColumn; col += 2) {
                 const columnLetter = getColumnLetter(col);
+                const arrHeaderValues = mainSheet
+                    .getCell(1, col)
+                    .value.split(" ");
+
+                const headerValue =
+                    arrHeaderValues.length > 1
+                        ? arrHeaderValues
+                              .slice(0, arrHeaderValues.length - 1)
+                              .join(" ")
+                        : arrHeaderValues[0];
+
+                console.log("headerValue: ", headerValue);
 
                 mainSheet.getCell(newLastRowIndex, col - 1).value =
-                    mainSheet.getCell(1, col).value;
+                    `${headerValue}:`;
                 const formula = `=SUM(${columnLetter}2:${columnLetter}${newLastRowIndex - 1})`;
 
-                mainSheet.getCell(newLastRowIndex, col).value = {formula: formula};
+                mainSheet.getCell(newLastRowIndex, col).value = {
+                    formula: formula
+                };
             }
         }
 
         mainSheet.getCell(
             newLastRowIndex,
-            costColumnIndex(remainingAmountOffset),
-        ).value = {formula: sumIfFormula(remainingAmountOffset)};
+            costColumnIndex(remainingAmountOffset)
+        ).value = {
+            formula: sumIfFormula(remainingAmountOffset)
+        };
         mainSheet.getCell(
             newLastRowIndex,
-            costColumnIndex(excessAmountOffset),
-        ).value = {formula: sumFormula(excessAmountOffset)};
+            costColumnIndex(excessAmountOffset)
+        ).value = {
+            formula: sumFormula(excessAmountOffset)
+        };
     }
 
     // const BASE_COLUMN_COUNT = 11;
@@ -515,11 +558,14 @@ async function processExcelFiles(mainFile, avrFile) {
 
     const calculateTotalQuantity = (rowIndex) => {
         const quantityColumnCount =
-            (mainSheet.columnCount - BASE_COLUMN_COUNT) / QUANTITY_COLUMNS_COUNT;
+            (mainSheet.columnCount - BASE_COLUMN_COUNT) /
+            QUANTITY_COLUMNS_COUNT;
         const firstQuantityColumnIndex = 7;
         return Array.from(
-            {length: quantityColumnCount},
-            (_, i) => firstQuantityColumnIndex + i * QUANTITY_COLUMNS_COUNT,
+            {
+                length: quantityColumnCount
+            },
+            (_, i) => firstQuantityColumnIndex + i * QUANTITY_COLUMNS_COUNT
         )
             .map((colIndex) => `${getColumnLetter(colIndex)}${rowIndex}`)
             .join(",");
@@ -534,8 +580,12 @@ async function processExcelFiles(mainFile, avrFile) {
 
         for (let row = 2; row <= mainData.length + 1; row++) {
             const columnLetterInsertIndexMinus1 = getColumnLetter(insertIndex);
-            const columnLetterInsertIndexPlus1 = getColumnLetter(insertIndex + 2);
-            const columnLetterInsertIndexPlus3 = getColumnLetter(insertIndex + 4);
+            const columnLetterInsertIndexPlus1 = getColumnLetter(
+                insertIndex + 2
+            );
+            const columnLetterInsertIndexPlus3 = getColumnLetter(
+                insertIndex + 4
+            );
 
             const totalCostFormula = `D${row} * E${row}`;
             const avrCostFormula = `${columnLetterInsertIndexMinus1}${row} * E${row}`;
@@ -545,24 +595,26 @@ async function processExcelFiles(mainFile, avrFile) {
             const remainingCostFormula = `${columnLetterInsertIndexPlus3}${row} * E${row}`;
             const excessFormula = `IF(${penultimateColumnLetter}${row}<0, ABS(${penultimateColumnLetter}${row}), 0)`;
 
-            mainSheet.getCell(`F${row}`).value = {formula: totalCostFormula};
+            mainSheet.getCell(`F${row}`).value = {
+                formula: totalCostFormula
+            };
             mainSheet.getCell(row, insertIndex + 1).value = {
-                formula: avrCostFormula,
+                formula: avrCostFormula
             };
             mainSheet.getCell(row, insertIndex + 2).value = {
-                formula: totalQuantityFormula,
+                formula: totalQuantityFormula
             };
             mainSheet.getCell(row, insertIndex + 3).value = {
-                formula: completedCostFormula,
+                formula: completedCostFormula
             };
             mainSheet.getCell(row, insertIndex + 4).value = {
-                formula: quantityRemainingFormula,
+                formula: quantityRemainingFormula
             };
             mainSheet.getCell(row, insertIndex + 5).value = {
-                formula: remainingCostFormula,
+                formula: remainingCostFormula
             };
             mainSheet.getCell(row, insertIndex + 6).value = {
-                formula: excessFormula,
+                formula: excessFormula
             };
         }
 
@@ -583,9 +635,11 @@ async function processExcelFiles(mainFile, avrFile) {
                             fill: {
                                 type: "pattern",
                                 pattern: "solid",
-                                bgColor: {argb: "FFFF6347"},
-                            },
-                        },
+                                bgColor: {
+                                    argb: "FFFF6347"
+                                }
+                            }
+                        }
                     },
                     {
                         type: "expression",
@@ -594,14 +648,19 @@ async function processExcelFiles(mainFile, avrFile) {
                             fill: {
                                 type: "pattern",
                                 pattern: "solid",
-                                bgColor: {argb: "C8FFC8"},
-                            },
-                        },
-                    },
-                ],
+                                bgColor: {
+                                    argb: "C8FFC8"
+                                }
+                            }
+                        }
+                    }
+                ]
             });
         } catch (error) {
-            console.error("Ошибка при добавлении условного форматирования:", error);
+            console.error(
+                "Ошибка при добавлении условного форматирования:",
+                error
+            );
         }
     }
     return await mainWorkbook.xlsx.writeBuffer();
@@ -609,7 +668,7 @@ async function processExcelFiles(mainFile, avrFile) {
 
 async function saveFile(data) {
     const blob = new Blob([data], {
-        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     });
     const url = URL.createObjectURL(blob);
 

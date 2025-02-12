@@ -23,7 +23,7 @@ body {
 }
 
 .selected_docs-description {
-    color: #1976D2;
+    color: #1976d2;
 }
 
 h1 {
@@ -41,12 +41,11 @@ h1 {
     margin-left: 10px;
 }
 
-
 button {
     margin: 5px;
     padding: 10px 15px;
     font-size: 16px;
-    background-color: #1976D2;
+    background-color: #1976d2;
     color: white;
     border: none;
     border-radius: 5px;
@@ -66,41 +65,44 @@ button:hover {
     background-color: #fafafa;
 }
 
-.info-message, .processing-message, .success-message, .error-message {
+.info-message,
+.processing-message,
+.success-message,
+.error-message {
     margin-bottom: 10px;
     padding: 10px;
     border-radius: 5px;
 }
 
 .info-message {
-    color: #1976D2;
-    background-color: #E3F2FD;
-    border: 1px solid #1976D2;
+    color: #1976d2;
+    background-color: #e3f2fd;
+    border: 1px solid #1976d2;
 }
 
 .processing-message {
-    color: #FF9800;
-    background-color: #FFF3E0;
-    border: 1px solid #FF9800;
+    color: #ff9800;
+    background-color: #fff3e0;
+    border: 1px solid #ff9800;
 }
 
 .success-message {
-    color: #4CAF50;
-    background-color: #E8F5E9;
-    border: 1px solid #4CAF50;
+    color: #4caf50;
+    background-color: #e8f5e9;
+    border: 1px solid #4caf50;
 }
 
 .error-message {
-    color: #F44336;
-    background-color: #FFEBEE;
-    border: 1px solid #F44336;
+    color: #f44336;
+    background-color: #ffebee;
+    border: 1px solid #f44336;
 }
 
 #timer {
     margin-top: 10px;
     font-size: 16px;
     font-weight: bold;
-    color: #1976D2;
+    color: #1976d2;
     display: none;
     text-align: center;
 }

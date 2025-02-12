@@ -1,30 +1,34 @@
 {
-  "name": "excel-web-processor",
-  "version": "1.0.0",
-  "main": "src/renderer.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "webpack",
-    "deploy": "gh-pages -d dist",
-    "start": "webpack serve --open"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "module",
-  "description": "",
-  "dependencies": {
-    "exceljs": "^4.4.0"
-  },
-  "devDependencies": {
-    "clean-webpack-plugin": "^4.0.0",
-    "css-loader": "^7.1.2",
-    "gh-pages": "^6.2.0",
-    "html-webpack-plugin": "^5.6.3",
-    "prettier": "3.4.2",
-    "style-loader": "^4.0.0",
-    "webpack": "^5.97.1",
-    "webpack-cli": "^6.0.1",
-    "webpack-dev-server": "^5.2.0"
-  }
+    "name": "excel-web-processor",
+    "version": "1.0.0",
+    "main": "src/renderer.js",
+    "scripts": {
+        "test": "echo \"Error: no test specified\" && exit 1",
+        "build": "webpack",
+        "deploy": "gh-pages -d dist",
+        "start": "webpack serve --open",
+        "format": "npx prettier --write ."
+    },
+    "keywords": [],
+    "author": "",
+    "license": "ISC",
+    "type": "module",
+    "description": "",
+    "dependencies": {
+        "exceljs": "^4.4.0"
+    },
+    "devDependencies": {
+        "@babel/core": "^7.26.8",
+        "@babel/preset-env": "^7.26.8",
+        "babel-loader": "^9.2.1",
+        "clean-webpack-plugin": "^4.0.0",
+        "css-loader": "^7.1.2",
+        "gh-pages": "^6.2.0",
+        "html-webpack-plugin": "^5.6.3",
+        "prettier": "3.5.0",
+        "style-loader": "^4.0.0",
+        "webpack": "^5.97.1",
+        "webpack-cli": "^6.0.1",
+        "webpack-dev-server": "^5.2.0"
+    }
 }

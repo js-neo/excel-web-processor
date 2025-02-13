@@ -1,5 +1,16 @@
 import "./styles.css";
 import ExcelJS from "exceljs";
+import { excelConstants } from "./constants/index.js";
+
+const {
+    BASE_COLUMN_COUNT,
+    QUANTITY_COLUMNS_COUNT,
+    CHUNK_SIZE,
+    SCALE_FACTOR,
+    NAME_COLUMN_WIDTH,
+    BASE_COLUMN_WIDTH,
+    EXTRA_WIDTH_FOR_NUMERIC
+} = excelConstants;
 
 let mainFilePath = "";
 let avrFilePath = "";
@@ -29,12 +40,7 @@ const setAvrFilePath = (file) => {
 };
 
 const handleProcessColumnNumber = ({ target }) => {
-    if (target.value > 0 && target.value <= 5) {
-        processColNum = target.value;
-    } else {
-        processColNum = 1;
-        target.value = processColNum;
-    }
+    processColNum = target.value;
 };
 
 outputDiv.innerHTML =
@@ -119,15 +125,6 @@ async function processExcelFiles(mainFile, avrFile) {
     const costColumnName = `${avrFileName} сумма`;
 
     const insertIndex = mainSheet.columnCount - 4;
-    const BASE_COLUMN_COUNT = 11;
-    const QUANTITY_COLUMNS_COUNT = 2;
-    const CHUNK_SIZE = 10;
-    const STANDARD_DPI = 96;
-    const BASE_SCALE_FACTOR = 400;
-    const SCALE_FACTOR = STANDARD_DPI / BASE_SCALE_FACTOR;
-    const NAME_COLUMN_WIDTH = 50;
-    const BASE_COLUMN_WIDTH = 15;
-    const EXTRA_WIDTH_FOR_NUMERIC = 2;
 
     const textFormat = "@";
     const format = `_-* #,##0.00_-;_-* "-" #,##0.00_-;_-* "-"??_-;_-@_-`;

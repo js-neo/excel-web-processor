@@ -1,10 +1,11 @@
-import "./styles.css";
+import "./styles/styles.css";
 import ExcelJS from "exceljs";
 import { excelConstants } from "./constants/index.js";
 import { sortKeys } from "./utils/sortingUtils.js";
 import { getColumnLetter, calculateCellWidth } from "./utils/excelUtils.js";
 import { saveFile } from "./utils/fileSaver.js";
 import { sheetStyle } from "./styles/cellStyles.js";
+import { formulas } from "./formulas/index.js";
 
 const {
     BASE_COLUMN_COUNT,
@@ -14,6 +15,18 @@ const {
     BASE_COLUMN_WIDTH,
     EXTRA_WIDTH_FOR_NUMERIC
 } = excelConstants;
+
+const {
+    totalCost,
+    avrCost,
+    totalQuantity,
+    completedCost,
+    quantityRemaining,
+    remainingCost,
+    excess,
+    sum,
+    sumIf
+} = formulas;
 
 let mainFilePath = "";
 let avrFilePath = "";
@@ -239,11 +252,9 @@ async function processExcelFiles(mainFile, avrFile) {
 
         for (let row = 2; row <= mainSheet.rowCount; row++) {
             for (let col = startColumn; col <= endColumn; col += 2) {
-                const previousCellAddress = getColumnLetter(col - 1) + row;
-                const formula = `=E${row}*${previousCellAddress}`;
-
+                const prevColIndex = col - 1;
                 mainSheet.getCell(row, col).value = {
-                    formula: formula
+                    formula: avrCost(row, prevColIndex)
                 };
             }
         }
@@ -349,10 +360,6 @@ async function processExcelFiles(mainFile, avrFile) {
         const excessAmountOffset = 6;
 
         const costColumnIndex = (i) => insertIndex + i;
-        const sumFormula = (num) =>
-            `SUM(${getColumnLetter(costColumnIndex(num))}2:${getColumnLetter(costColumnIndex(num))}${newLastRowIndex - 1})`;
-        const sumIfFormula = (num) =>
-            `SUMIF(${getColumnLetter(costColumnIndex(num))}2:${getColumnLetter(costColumnIndex(num))}${newLastRowIndex - 1},">0")`;
 
         if (totalColumns >= 11) {
             const startColumn = 6;
@@ -387,13 +394,13 @@ async function processExcelFiles(mainFile, avrFile) {
             newLastRowIndex,
             costColumnIndex(remainingAmountOffset)
         ).value = {
-            formula: sumIfFormula(remainingAmountOffset)
+            formula: sumIf(newLastRowIndex, insertIndex, remainingAmountOffset)
         };
         mainSheet.getCell(
             newLastRowIndex,
             costColumnIndex(excessAmountOffset)
         ).value = {
-            formula: sumFormula(excessAmountOffset)
+            formula: sum(newLastRowIndex, insertIndex, excessAmountOffset)
         };
     }
 
@@ -423,42 +430,26 @@ async function processExcelFiles(mainFile, avrFile) {
         const trackingColumnLetter = getColumnLetter(trackingColumnIndex);
 
         for (let row = 2; row <= mainData.length + 1; row++) {
-            const columnLetterInsertIndexMinus1 = getColumnLetter(insertIndex);
-            const columnLetterInsertIndexPlus1 = getColumnLetter(
-                insertIndex + 2
-            );
-            const columnLetterInsertIndexPlus3 = getColumnLetter(
-                insertIndex + 4
-            );
-
-            const totalCostFormula = `D${row} * E${row}`;
-            const avrCostFormula = `${columnLetterInsertIndexMinus1}${row} * E${row}`;
-            const totalQuantityFormula = `SUM(${calculateTotalQuantity(row)})`;
-            const completedCostFormula = `${columnLetterInsertIndexPlus1}${row} * E${row}`;
-            const quantityRemainingFormula = `D${row} - ${columnLetterInsertIndexPlus1}${row}`;
-            const remainingCostFormula = `${columnLetterInsertIndexPlus3}${row} * E${row}`;
-            const excessFormula = `IF(${penultimateColumnLetter}${row}<0, ABS(${penultimateColumnLetter}${row}), 0)`;
-
             mainSheet.getCell(`F${row}`).value = {
-                formula: totalCostFormula
+                formula: totalCost(row)
             };
             mainSheet.getCell(row, insertIndex + 1).value = {
-                formula: avrCostFormula
+                formula: avrCost(row, insertIndex)
             };
             mainSheet.getCell(row, insertIndex + 2).value = {
-                formula: totalQuantityFormula
+                formula: totalQuantity(row, calculateTotalQuantity)
             };
             mainSheet.getCell(row, insertIndex + 3).value = {
-                formula: completedCostFormula
+                formula: completedCost(row, insertIndex)
             };
             mainSheet.getCell(row, insertIndex + 4).value = {
-                formula: quantityRemainingFormula
+                formula: quantityRemaining(row, insertIndex)
             };
             mainSheet.getCell(row, insertIndex + 5).value = {
-                formula: remainingCostFormula
+                formula: remainingCost(row, insertIndex)
             };
             mainSheet.getCell(row, insertIndex + 6).value = {
-                formula: excessFormula
+                formula: excess(row, penultimateColumnLetter)
             };
         }
 

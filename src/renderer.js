@@ -1,12 +1,14 @@
 import "./styles.css";
 import ExcelJS from "exceljs";
 import { excelConstants } from "./constants/index.js";
+import { sortKeys } from "./utils/sortingUtils.js";
+import { getColumnLetter, calculateCellWidth } from "./utils/excelUtils.js";
+import { saveFile } from "./utils/fileSaver.js";
 
 const {
     BASE_COLUMN_COUNT,
     QUANTITY_COLUMNS_COUNT,
     CHUNK_SIZE,
-    SCALE_FACTOR,
     NAME_COLUMN_WIDTH,
     BASE_COLUMN_WIDTH,
     EXTRA_WIDTH_FOR_NUMERIC
@@ -238,23 +240,7 @@ async function processExcelFiles(mainFile, avrFile) {
     let quantityExists = false;
     let costExists = false;
 
-    function getColumnLetter(columnIndex) {
-        let letter = "";
-        while (columnIndex > 0) {
-            const modulo = (columnIndex - 1) % 26;
-            letter = String.fromCharCode(65 + modulo) + letter;
-            columnIndex = Math.floor((columnIndex - modulo) / 26);
-        }
-        return letter;
-    }
-
-    function calculateCellWidth(value, font) {
-        const canvas = document.createElement("canvas");
-        const context = canvas.getContext("2d");
-        context.font = `${font.size}px ${font.name}`;
-        const metrics = context.measureText(value);
-        return Math.round(metrics.width * SCALE_FACTOR);
-    }
+    // =>
 
     for (let col = 1; col <= mainSheet.columnCount; col++) {
         const headerCell = mainSheet.getCell(1, col);
@@ -294,39 +280,7 @@ async function processExcelFiles(mainFile, avrFile) {
 
     const allKeys = [...new Set([...mainKeys, ...avrKeys])]
         .filter((key) => key !== undefined)
-        .sort((a, b) => {
-            const splitRegex = /(\d+([.,]\d+)?)|([^0-9]+)/g;
-
-            const getParts = (str) =>
-                str
-                    .match(splitRegex)
-                    ?.filter((x) => x !== undefined && x !== "") || [];
-
-            const aParts = getParts(a);
-            const bParts = getParts(b);
-
-            for (let i = 0; i < Math.max(aParts.length, bParts.length); i++) {
-                const aPart = aParts[i] || "";
-                const bPart = bParts[i] || "";
-
-                const aIsNum = /^\d+([.,]\d+)?$/.test(aPart);
-                const bIsNum = /^\d+([.,]\d+)?$/.test(bPart);
-
-                if (aIsNum && bIsNum) {
-                    const aNum = parseFloat(aPart.replace(",", "."));
-                    const bNum = parseFloat(bPart.replace(",", "."));
-                    if (aNum !== bNum) return aNum - bNum;
-                } else if (aIsNum !== bIsNum) {
-                    return aIsNum ? -1 : 1;
-                } else {
-                    const diff = aPart.localeCompare(bPart, undefined, {
-                        sensitivity: "base"
-                    });
-                    if (diff !== 0) return diff;
-                }
-            }
-            return 0;
-        });
+        .sort(sortKeys);
 
     const newTable = [];
     const avrMap = new Map(
@@ -661,20 +615,4 @@ async function processExcelFiles(mainFile, avrFile) {
         }
     }
     return await mainWorkbook.xlsx.writeBuffer();
-}
-
-async function saveFile(data) {
-    const blob = new Blob([data], {
-        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    });
-    const url = URL.createObjectURL(blob);
-
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "data.xlsx";
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-
-    URL.revokeObjectURL(url);
 }

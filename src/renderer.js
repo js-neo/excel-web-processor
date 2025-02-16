@@ -6,6 +6,7 @@ import { getColumnLetter, calculateCellWidth } from "./utils/excelUtils.js";
 import { saveFile } from "./utils/fileSaver.js";
 import { sheetStyle } from "./styles/cellStyles.js";
 import { formulas } from "./formulas/index.js";
+import { globals } from "./dom/index.js";
 
 const {
     BASE_COLUMN_COUNT,
@@ -28,17 +29,17 @@ const {
     sumIf
 } = formulas;
 
-let mainFilePath = "";
-let avrFilePath = "";
-let processColNum = 1;
+const {
+    mainFileInput,
+    avrFileInput,
+    processFilesButton,
+    outputDiv,
+    mainFileName,
+    avrFileName,
+    processColumnNumber
+} = globals;
 
-const mainFileInput = document.getElementById("selectMainFile");
-const avrFileInput = document.getElementById("selectAvrFile");
-const processFilesButton = document.getElementById("processFilesButton");
-const outputDiv = document.getElementById("output");
-const mainFileName = document.getElementById("mainFileName");
-const avrFileName = document.getElementById("avrFileName");
-const processColumnNumber = document.getElementById("processColumnNumber");
+let { mainFilePath, avrFilePath, processColNum } = globals;
 
 const handleFileSelect = (setFilePath) => (event) => {
     const file = event.target.files[0];

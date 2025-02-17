@@ -30,7 +30,26 @@ const footerFill = {
     }
 };
 
-export const sheetStyle = {
+const tomato = "FFFF6347";
+const pastelGreen = "C8FFC8";
+
+const style_error = {
+    type: "pattern",
+    pattern: "solid",
+    bgColor: {
+        argb: tomato
+    }
+};
+
+const style_success = {
+    type: "pattern",
+    pattern: "solid",
+    bgColor: {
+        argb: pastelGreen
+    }
+};
+
+const sheetStyle = {
     headerStyle: {
         font: {
             name: "Times New Roman",
@@ -103,3 +122,31 @@ export const sheetStyle = {
         numFmt: format
     }
 };
+
+const createFormattingOptions = (rangeRef, formula_invalid, formula_valid) => ({
+    ref: rangeRef,
+    rules: [
+        /**
+         * @type {import('exceljs').ConditionalFormattingRule}
+         */
+        {
+            type: "expression",
+            formulae: [formula_invalid],
+            style: {
+                fill: style_error
+            }
+        },
+        /**
+         * @type {import('exceljs').ConditionalFormattingRule}
+         */
+        {
+            type: "expression",
+            formulae: [formula_valid],
+            style: {
+                fill: style_success
+            }
+        }
+    ]
+});
+
+export default { sheetStyle, createFormattingOptions };

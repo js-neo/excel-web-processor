@@ -4,7 +4,7 @@ import { excelConstants } from "./constants/index.js";
 import { sortKeys } from "./utils/sortingUtils.js";
 import { getColumnLetter, calculateCellWidth } from "./utils/excelUtils.js";
 import { saveFile } from "./utils/fileSaver.js";
-import { sheetStyle } from "./styles/cellStyles.js";
+import { cellStyle } from "./styles/index.js";
 import { formulas } from "./formulas/index.js";
 import { globals } from "./dom/index.js";
 
@@ -17,6 +17,8 @@ const {
     EXTRA_WIDTH_FOR_NUMERIC
 } = excelConstants;
 
+const { sheetStyle, createFormattingOptions } = cellStyle;
+
 const {
     totalCost,
     avrCost,
@@ -26,7 +28,9 @@ const {
     remainingCost,
     excess,
     sum,
-    sumIf
+    sumIf,
+    negativeValueCheck,
+    zeroValueCheck
 } = formulas;
 
 const {
@@ -428,7 +432,6 @@ async function processExcelFiles(mainFile, avrFile) {
         const penultimateColumnIndex = lastColumnIndex - 1;
         const trackingColumnIndex = lastColumnIndex - 2;
         const penultimateColumnLetter = getColumnLetter(penultimateColumnIndex);
-        const trackingColumnLetter = getColumnLetter(trackingColumnIndex);
 
         for (let row = 2; row <= mainData.length + 1; row++) {
             mainSheet.getCell(`F${row}`).value = {
@@ -454,44 +457,19 @@ async function processExcelFiles(mainFile, avrFile) {
             };
         }
 
-        const formula_Tomato = `=$${trackingColumnLetter}2<0`;
-        const formula_PastelGreen = `=AND(NOT(ISBLANK($${trackingColumnLetter}2)),$${trackingColumnLetter}2=0)`;
-
         try {
-            const rangeRef = `A2:${getColumnLetter(lastColumnIndex)}${mainSheet.rowCount}`;
+            const rowCount = mainSheet.rowCount;
+            const lastColumnLetter = getColumnLetter(lastColumnIndex);
+            const rangeRef = `A2:${lastColumnLetter}${rowCount}`;
             mainSheet.removeConditionalFormatting(rangeRef);
 
-            mainSheet.addConditionalFormatting({
-                ref: `A2:${getColumnLetter(lastColumnIndex)}${mainSheet.rowCount}`,
-                rules: [
-                    {
-                        type: "expression",
-                        formulae: [formula_Tomato],
-                        style: {
-                            fill: {
-                                type: "pattern",
-                                pattern: "solid",
-                                bgColor: {
-                                    argb: "FFFF6347"
-                                }
-                            }
-                        }
-                    },
-                    {
-                        type: "expression",
-                        formulae: [formula_PastelGreen],
-                        style: {
-                            fill: {
-                                type: "pattern",
-                                pattern: "solid",
-                                bgColor: {
-                                    argb: "C8FFC8"
-                                }
-                            }
-                        }
-                    }
-                ]
-            });
+            const formattingOptions = createFormattingOptions(
+                rangeRef,
+                negativeValueCheck(trackingColumnIndex),
+                zeroValueCheck(trackingColumnIndex)
+            );
+
+            mainSheet.addConditionalFormatting(formattingOptions);
         } catch (error) {
             console.error(
                 "Ошибка при добавлении условного форматирования:",

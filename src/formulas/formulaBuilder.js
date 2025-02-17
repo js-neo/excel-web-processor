@@ -17,7 +17,11 @@ const formulas = {
     sum: (row, insertIndex, offset) =>
         `SUM(${getColumnLetter(insertIndex + offset)}2:${getColumnLetter(insertIndex + offset)}${row - 1})`,
     sumIf: (row, insertIndex, offset) =>
-        `SUMIF(${getColumnLetter(insertIndex + offset)}2:${getColumnLetter(insertIndex + offset)}${row - 1},">0")`
+        `SUMIF(${getColumnLetter(insertIndex + offset)}2:${getColumnLetter(insertIndex + offset)}${row - 1},">0")`,
+    negativeValueCheck: (trackingColumnIndex) =>
+        `=$${getColumnLetter(trackingColumnIndex)}2<0`,
+    zeroValueCheck: (trackingColumnIndex) =>
+        `=AND(NOT(ISBLANK($${getColumnLetter(trackingColumnIndex)}2)),$${getColumnLetter(trackingColumnIndex)}2=0)`
 };
 
 export default formulas;

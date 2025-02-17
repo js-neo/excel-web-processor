@@ -7,6 +7,7 @@ import { saveFile } from "./utils/fileSaver.js";
 import { cellStyle } from "./styles/index.js";
 import { formulas } from "./formulas/index.js";
 import { globals } from "./dom/index.js";
+import { fileHandlers } from "./handlers/index.js";
 
 const {
     BASE_COLUMN_COUNT,
@@ -43,26 +44,14 @@ const {
     processColumnNumber
 } = globals;
 
-let { mainFilePath, avrFilePath, processColNum } = globals;
+const { mainFilePath, avrFilePath, processColNum } = globals;
 
-const handleFileSelect = (setFilePath) => (event) => {
-    const file = event.target.files[0];
-    if (file) {
-        setFilePath(file);
-    }
-};
-
-const setMainFilePath = (file) => {
-    mainFilePath = file;
-};
-
-const setAvrFilePath = (file) => {
-    avrFilePath = file;
-};
-
-const handleProcessColumnNumber = ({ target }) => {
-    processColNum = target.value;
-};
+const {
+    handleFileSelect,
+    setMainFilePath,
+    setAvrFilePath,
+    handleProcessColumnNumber
+} = fileHandlers;
 
 outputDiv.innerHTML =
     '<div class="info-message">Пожалуйста, загрузите основной файл сводной таблицы и файл АВР, ' +
@@ -462,6 +451,15 @@ async function processExcelFiles(mainFile, avrFile) {
             const lastColumnLetter = getColumnLetter(lastColumnIndex);
             const rangeRef = `A2:${lastColumnLetter}${rowCount}`;
             mainSheet.removeConditionalFormatting(rangeRef);
+            console.log("trackingColumnIndex: ", trackingColumnIndex);
+            console.log(
+                "negativeValueCheck(trackingColumnIndex): ",
+                negativeValueCheck(trackingColumnIndex)
+            );
+            console.log(
+                "zeroValueCheck(trackingColumnIndex): ",
+                zeroValueCheck(trackingColumnIndex)
+            );
 
             const formattingOptions = createFormattingOptions(
                 rangeRef,

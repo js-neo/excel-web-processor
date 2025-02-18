@@ -1,7 +1,5 @@
 import { globals } from "../dom/index.js";
 
-let { mainFilePath, avrFilePath, processColNum } = globals;
-
 const handleFileSelect = (setFilePath) => (event) => {
     const file = event.target.files[0];
     if (file) {
@@ -10,15 +8,15 @@ const handleFileSelect = (setFilePath) => (event) => {
 };
 
 const setMainFilePath = (file) => {
-    mainFilePath = file;
+    globals.mainFilePath = file;
 };
 
 const setAvrFilePath = (file) => {
-    avrFilePath = file;
+    globals.avrFilePath = file;
 };
 
 const handleProcessColumnNumber = ({ target }) => {
-    processColNum = target.value;
+    globals.processColNum = target.value;
 };
 
 export default {

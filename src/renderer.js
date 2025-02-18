@@ -8,6 +8,7 @@ import { cellStyle } from "./styles/index.js";
 import { formulas } from "./formulas/index.js";
 import { globals } from "./dom/index.js";
 import { fileHandlers } from "./handlers/index.js";
+import { uiHandler } from "./ui/index.js";
 
 const {
     BASE_COLUMN_COUNT,
@@ -41,10 +42,10 @@ const {
     outputDiv,
     mainFileName,
     avrFileName,
-    processColumnNumber
+    processColumnNumber,
+    timerElement,
+    timerValueElement
 } = globals;
-
-const { mainFilePath, avrFilePath, processColNum } = globals;
 
 const {
     handleFileSelect,
@@ -53,9 +54,9 @@ const {
     handleProcessColumnNumber
 } = fileHandlers;
 
-outputDiv.innerHTML =
-    '<div class="info-message">Пожалуйста, загрузите основной файл сводной таблицы и файл АВР, ' +
-    'затем нажмите кнопку "Обработать файлы".</div>';
+const { showProcessingMessage, updateUI } = uiHandler;
+
+updateUI(outputDiv, "info");
 
 mainFileInput.addEventListener("change", function (event) {
     mainFileName.textContent = this.files.length > 0 ? this.files[0].name : "";
@@ -63,54 +64,30 @@ mainFileInput.addEventListener("change", function (event) {
 });
 
 avrFileInput.addEventListener("change", function (event) {
+    console.log("event: ", event);
     avrFileName.textContent = this.files.length > 0 ? this.files[0].name : "";
     handleFileSelect(setAvrFilePath)(event);
 });
 
 processFilesButton.addEventListener("click", async () => {
-    if (mainFilePath && avrFilePath) {
-        outputDiv.innerHTML =
-            '<div class="processing-message">Идет обработка файлов.</div>';
-        document.getElementById("timer").style.display = "block";
-
-        const startTime = Date.now();
-        let dotCount = 1;
-        const maxDots = 5;
-
-        const timerInterval = setInterval(() => {
-            document.getElementById("timerValue").innerText = (
-                (Date.now() - startTime) /
-                1000
-            ).toFixed(2);
-        }, 100);
-
-        const messageInterval = setInterval(() => {
-            const dots = ".".repeat(dotCount);
-            outputDiv.querySelector(".processing-message").textContent =
-                `Идет обработка файлов${dots}`;
-            dotCount = (dotCount % maxDots) + 1;
-        }, 500);
-
+    if (globals.mainFilePath && globals.avrFilePath) {
+        const processingUI = showProcessingMessage(
+            outputDiv,
+            timerElement,
+            timerValueElement
+        );
         try {
             const processedData = await processExcelFiles(
-                mainFilePath,
-                avrFilePath
+                globals.mainFilePath,
+                globals.avrFilePath
             );
             await saveFile(processedData);
-            const endTime = Date.now();
-            clearInterval(timerInterval);
-            clearInterval(messageInterval);
-            const duration = ((endTime - startTime) / 1000).toFixed(2);
-            outputDiv.innerHTML = `<div class="success-message">Файлы успешно обработаны! 
-Время выполнения: ${duration} секунд.</div>`;
-            document.getElementById("timer").style.display = "none";
+            const duration = processingUI.getDuration();
+            updateUI(outputDiv, "success", { duration });
         } catch (error) {
-            clearInterval(timerInterval);
-            clearInterval(messageInterval);
-            outputDiv.innerHTML = `<div class="error-message">Ошибка обработки файлов: ${error.message}. 
-Пожалуйста, попробуйте снова.</div>`;
+            updateUI(outputDiv, "error", { errorMessage: error.message });
         } finally {
-            document.getElementById("timer").style.display = "none";
+            processingUI.stop();
         }
     } else {
         alert("Пожалуйста, выберите оба файла.");
@@ -168,14 +145,14 @@ async function processExcelFiles(mainFile, avrFile) {
         mainSheet
             .getSheetValues()
             .slice(2)
-            .map((row) => String(row[processColNum] || "").trim())
+            .map((row) => String(row[globals.processColNum] || "").trim())
     );
 
     const avrKeys = new Set(
         avrSheet
             .getSheetValues()
             .slice(2)
-            .map((row) => String(row[processColNum] || "").trim())
+            .map((row) => String(row[globals.processColNum] || "").trim())
     );
 
     const allKeys = [...new Set([...mainKeys, ...avrKeys])]
@@ -187,14 +164,16 @@ async function processExcelFiles(mainFile, avrFile) {
         avrSheet
             .getSheetValues()
             .slice(2)
-            .map((row) => [row[processColNum]?.trim(), row])
+            .map((row) => [row[globals.processColNum]?.trim(), row])
     );
 
     const mainValues = mainSheet.getSheetValues().slice(2);
 
     allKeys.forEach((key) => {
+        console.log("Обработка строк таблицы");
         const mainRow = mainValues.find(
-            (row) => String(row[processColNum]).trim() === String(key).trim()
+            (row) =>
+                String(row[globals.processColNum]).trim() === String(key).trim()
         );
 
         if (mainRow) {
@@ -205,10 +184,10 @@ async function processExcelFiles(mainFile, avrFile) {
             const newRow = new Array(mainSheet.columnCount).fill(null);
 
             if (avrRow) {
-                if (Number(processColNum) === 1) {
+                if (Number(globals.processColNum) === 1) {
                     newRow[0] = String(key);
                     newRow[1] = avrRow?.[2] || "";
-                } else if (Number(processColNum) === 2) {
+                } else if (Number(globals.processColNum) === 2) {
                     newRow[0] = avrRow?.[1] || "";
                     newRow[1] = String(key);
                 }
@@ -223,6 +202,7 @@ async function processExcelFiles(mainFile, avrFile) {
             newTable.push(newRow);
         }
     });
+    console.log("Выход из цикла построения строк");
 
     while (mainSheet.rowCount > 1) {
         mainSheet.spliceRows(2, 1);
@@ -234,6 +214,7 @@ async function processExcelFiles(mainFile, avrFile) {
         console.error(`Ошибка: осталось ${remainingRows} строк в mainSheet.`);
     } else {
         newTable.forEach((row) => {
+            console.log("Вставка новых строк");
             mainSheet.addRow(row);
         });
     }
@@ -243,7 +224,7 @@ async function processExcelFiles(mainFile, avrFile) {
     if (totalColumns >= 15) {
         const startColumn = 8;
         const endColumn = totalColumns - 7;
-
+        console.log("Вставка формул в ячейки");
         for (let row = 2; row <= mainSheet.rowCount; row++) {
             for (let col = startColumn; col <= endColumn; col += 2) {
                 const prevColIndex = col - 1;
@@ -260,6 +241,7 @@ async function processExcelFiles(mainFile, avrFile) {
 
     for (let i = 1; i <= totalRows; i += CHUNK_SIZE) {
         await new Promise((resolve) => setTimeout(resolve, 0));
+        console.log("Заполнение ячеек таблицы");
 
         const endRow = Math.min(i + CHUNK_SIZE - 1, totalRows);
         for (let row = i; row <= endRow; row++) {
@@ -331,7 +313,8 @@ async function processExcelFiles(mainFile, avrFile) {
     const mainData = mainSheet.getSheetValues().slice(2);
 
     mainData.forEach((row, index) => {
-        const avrRow = avrMap.get(row[processColNum]);
+        console.log("Заполнение колонок АВР");
+        const avrRow = avrMap.get(row[globals.processColNum]);
         const cell = mainSheet.getCell(index + 2, insertIndex);
         cell.value = avrRow ? avrRow[4] : 0;
     });
@@ -342,7 +325,7 @@ async function processExcelFiles(mainFile, avrFile) {
     if (lastRowCellValue !== "Всего:") {
         mainSheet.addRow(["", "Всего:"]);
         const newLastRowIndex = lastRow + 1;
-
+        console.log("Построение строки Всего");
         for (let col = 1; col <= mainSheet.columnCount; col++) {
             const cell = mainSheet.getCell(newLastRowIndex, col);
             cell.style =
@@ -423,6 +406,7 @@ async function processExcelFiles(mainFile, avrFile) {
         const penultimateColumnLetter = getColumnLetter(penultimateColumnIndex);
 
         for (let row = 2; row <= mainData.length + 1; row++) {
+            console.log("Вставка формул в последние 5 колонок");
             mainSheet.getCell(`F${row}`).value = {
                 formula: totalCost(row)
             };

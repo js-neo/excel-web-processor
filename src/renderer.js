@@ -95,6 +95,7 @@ processFilesButton.addEventListener("click", async () => {
 processColumnNumber.addEventListener("change", handleProcessColumnNumber);
 
 async function processExcelFiles(mainFile, avrFile) {
+    console.time("Initial table data");
     const mainWorkbook = new ExcelJS.Workbook();
     await mainWorkbook.xlsx.load(await mainFile.arrayBuffer());
     let mainSheet = mainWorkbook.worksheets[0];
@@ -102,6 +103,8 @@ async function processExcelFiles(mainFile, avrFile) {
     const avrWorkbook = new ExcelJS.Workbook();
     await avrWorkbook.xlsx.load(await avrFile.arrayBuffer());
     const avrSheet = avrWorkbook.worksheets[0];
+
+    console.timeEnd("Initial table data");
 
     const avrFileName = avrFile.name.replace(".xlsx", "");
     const quantityColumnName = `${avrFileName} кол-во`;
@@ -114,6 +117,8 @@ async function processExcelFiles(mainFile, avrFile) {
 
     let quantityExists = false;
     let costExists = false;
+
+    console.time("Insert new column");
 
     for (let col = 1; col <= mainSheet.columnCount; col++) {
         const headerCell = mainSheet.getCell(1, col);
@@ -132,46 +137,86 @@ async function processExcelFiles(mainFile, avrFile) {
         );
     }
 
+    console.timeEnd("Insert new column");
+
     const footerSecondCell = mainSheet.getCell(mainSheet.rowCount, 2);
     if (footerSecondCell.value === "Всего:") {
         mainSheet.spliceRows(mainSheet.rowCount, 1);
     }
+    const mainMap = new Map();
+    const avrMap = new Map();
+    const getErrorMessage = ({
+        processCol,
+        excelRowIndex,
+        fileName,
+        typeErrorValue
+    }) =>
+        `В ячейке ${getColumnLetter(processCol)}${excelRowIndex} ключевого столбца файла ${fileName} обнаружено ${typeErrorValue} значение`;
 
-    const getKeys = (sheet, processCol, fileName) =>
-        sheet
-            .getSheetValues()
-            .slice(2)
-            .map((row, i) => {
-                const rawValue = row[processCol];
-                const excelRowIndex = i + 2;
-                const strValue = String(rawValue ?? "").trim();
-                if (strValue === "") {
-                    throw new Error(
-                        `В строке ${excelRowIndex} обнаружены пустые значения в ключевом столбце ${processCol} ${fileName} файла`
-                    );
-                }
-                return strValue;
-            });
-    const mainKeys = new Set(
-        getKeys(mainSheet, globals.processColNum, "Основного")
+    const populateMapAndGetKeys = async (
+        sheet,
+        targetMap,
+        processCol,
+        fileName
+    ) => {
+        const rows = sheet.getSheetValues().slice(2);
+        if (!Array.isArray(rows)) {
+            throw new Error(`Данные листа не являются массивом!`);
+        }
+        const CHUNK_SIZE = Math.max(50, Math.floor(rows.length / 100));
+
+        const keys = [];
+        for (let i = 0; i < rows.length; i++) {
+            const row = rows[i];
+            const rawValue = row[processCol];
+            const excelRowIndex = i + 2;
+            const strValue = String(rawValue ?? "").trim();
+            if (strValue === "") {
+                throw new Error(
+                    getErrorMessage({
+                        processCol,
+                        excelRowIndex,
+                        fileName,
+                        typeErrorValue: "пустое"
+                    })
+                );
+            }
+            if (targetMap.has(strValue)) {
+                throw new Error(
+                    getErrorMessage({
+                        processCol,
+                        excelRowIndex,
+                        fileName,
+                        typeErrorValue: "дублирующее"
+                    })
+                );
+            }
+            targetMap.set(strValue, row);
+            keys.push(strValue);
+            if (i % CHUNK_SIZE === 0)
+                await new Promise((resolve) => setTimeout(resolve, 0));
+        }
+        return keys;
+    };
+    console.time("Build Map rows and all keys");
+    const mainKeys = await populateMapAndGetKeys(
+        mainSheet,
+        mainMap,
+        globals.processColNum,
+        "сводной таблицы"
     );
-    const avrKeys = new Set(getKeys(avrSheet, globals.processColNum, "АВР"));
-
-    const allKeys = [...new Set([...mainKeys, ...avrKeys])]
-        .filter((key) => key !== undefined)
-        .sort(sortKeys);
-
-    const avrMap = new Map(
-        avrSheet
-            .getSheetValues()
-            .slice(2)
-            .map((row) => [row[globals.processColNum]?.trim(), row])
+    const avrKeys = await populateMapAndGetKeys(
+        avrSheet,
+        avrMap,
+        globals.processColNum,
+        "АВР"
     );
 
-    const mainValues = mainSheet.getSheetValues().slice(2);
+    const allKeys = [...new Set([...mainKeys, ...avrKeys])].sort(sortKeys);
+    console.timeEnd("Build Map rows and all keys");
 
     console.time("Build rows");
-    const newTable = await buildRows(allKeys, mainValues, avrMap, mainSheet);
+    const newTable = await buildRows(allKeys, mainMap, avrMap, mainSheet);
     console.timeEnd("Build rows");
 
     console.time("Deleted rows");
@@ -429,51 +474,64 @@ async function processExcelFiles(mainFile, avrFile) {
     return await mainWorkbook.xlsx.writeBuffer();
 }
 
-async function buildRows(allKeys, mainValues, avrMap, mainSheet) {
-    const newTable = [];
+async function buildRows(allKeys, mainMap, avrMap, mainSheet) {
     const CHUNK_SIZE = 100;
+    const processColIdx = globals.processColNum;
+
+    const processRow = (key) => {
+        const mainRow = mainMap.get(key);
+
+        if (mainRow) {
+            mainRow[1] = mainRow[1] || "";
+            return mainRow;
+        }
+        const avrRow = avrMap.get(key);
+        const newRow = new Array(mainSheet.columnCount).fill(null);
+
+        if (avrRow) {
+            newRow[0] =
+                Number(processColIdx) === 1 ? String(key) : avrRow[1] || "";
+            newRow[1] =
+                Number(processColIdx) === 2 ? String(key) : avrRow[2] || "";
+            newRow[2] = avrRow[3];
+            newRow[3] = 0;
+            newRow[4] = avrRow[5];
+        } else {
+            newRow[4] = 0;
+        }
+
+        return newRow;
+    };
+
+    const processChunk = async (chunk, chunkIndex) => {
+        const chunkResult = [];
+        for (const key of chunk) {
+            try {
+                const row = processRow(key);
+                if (row) {
+                    chunkResult.push(row);
+                }
+            } catch (error) {
+                console.error(`Error processing key ${key}: ${error}`);
+            }
+        }
+        if (chunkIndex % 10 === 0) {
+            await new Promise((resolve) => setTimeout(resolve, 0));
+        }
+
+        return chunkResult;
+    };
+
+    const chunks = [];
 
     for (let i = 0; i < allKeys.length; i += CHUNK_SIZE) {
         const chunk = allKeys.slice(i, i + CHUNK_SIZE);
-
-        for (const key of chunk) {
-            const mainRow = mainValues.find(
-                (row) =>
-                    String(row[globals.processColNum]).trim() ===
-                    String(key).trim()
-            );
-
-            if (mainRow) {
-                mainRow[1] = mainRow[1] || "";
-                newTable.push(mainRow);
-            } else {
-                const avrRow = avrMap.get(key);
-                const newRow = new Array(mainSheet.columnCount).fill(null);
-
-                if (avrRow) {
-                    newRow[0] =
-                        Number(globals.processColNum) === 1
-                            ? String(key)
-                            : avrRow[1] || "";
-                    newRow[1] =
-                        Number(globals.processColNum) === 2
-                            ? String(key)
-                            : avrRow[2] || "";
-                    newRow[2] = avrRow[3];
-                    newRow[3] = 0;
-                    newRow[4] = avrRow[5];
-                } else {
-                    newRow[4] = 0;
-                }
-
-                newTable.push(newRow);
-            }
-        }
-
-        if (i % (CHUNK_SIZE * 10) === 0) {
-            await new Promise((resolve) => setTimeout(resolve, 0));
-        }
+        chunks.push(chunk);
     }
 
-    return newTable;
+    const results = await Promise.all(
+        chunks.map((chunk, index) => processChunk(chunk, index))
+    );
+
+    return results.flat();
 }

@@ -59,8 +59,9 @@ function updateUI(container, type, options = {}) {
     } else if (type === "error") {
         const { errorMessage } = options;
         message = `
-            Ошибка обработки файлов: ${errorMessage}.<br>
-            Пожалуйста, попробуйте снова.
+            Ошибка обработки файлов: <br> 
+            ${errorMessage}.<br>
+            Пожалуйста, устраните это и попробуйте снова.
         `;
     }
 

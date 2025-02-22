@@ -60,7 +60,7 @@ function updateUI(container, type, options = {}) {
         const { errorMessage } = options;
         message = `
             Ошибка обработки файлов: <br> 
-            ${errorMessage}.<br>
+            ${errorMessage}<br>
             Пожалуйста, устраните это и попробуйте снова.
         `;
     }

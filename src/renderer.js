@@ -10,6 +10,22 @@ import { globals } from "./dom/index.js";
 import { fileHandlers } from "./handlers/index.js";
 import { uiHandler } from "./ui/index.js";
 
+class ProcessingError extends Error {
+    constructor(messages, fileName) {
+        const consoleMessage = `Ошибки в файле ${fileName}:\n${messages
+            .map((error) => error.text)
+            .join("\n")}`;
+        super(consoleMessage);
+
+        this.name = "ProcessingError";
+
+        this.htmlMessage = `
+            Ошибки в файле ${fileName}:<br>
+            <ol>${messages.map((error) => `<li>${error.htmlElem}</li>`).join("")}</ol>
+        `;
+    }
+}
+
 const {
     BASE_COLUMN_COUNT,
     QUANTITY_COLUMNS_COUNT,
@@ -148,11 +164,12 @@ async function processExcelFiles(mainFile, avrFile) {
     const getErrorMessage = ({
         processCol,
         excelRowIndex,
-        fileName,
         typeErrorValue
-    }) =>
-        `В ячейке ${getColumnLetter(processCol)}${excelRowIndex} ключевого столбца файла ${fileName} обнаружено ${typeErrorValue} значение`;
-
+    }) => ({
+        text: `в ячейке ${getColumnLetter(processCol)}${excelRowIndex} обнаружено ${typeErrorValue} значение`,
+        htmlElem: `в ячейке <strong>${getColumnLetter(processCol)}${excelRowIndex}</strong> 
+        обнаружено ${typeErrorValue} значение`
+    });
     const populateMapAndGetKeys = async (
         sheet,
         targetMap,
@@ -166,53 +183,66 @@ async function processExcelFiles(mainFile, avrFile) {
         const CHUNK_SIZE = Math.max(50, Math.floor(rows.length / 100));
 
         const keys = [];
+        const errors = [];
         for (let i = 0; i < rows.length; i++) {
             const row = rows[i];
             const rawValue = row[processCol];
             const excelRowIndex = i + 2;
             const strValue = String(rawValue ?? "").trim();
             if (strValue === "") {
-                throw new Error(
+                errors.push(
                     getErrorMessage({
                         processCol,
                         excelRowIndex,
-                        fileName,
                         typeErrorValue: "пустое"
                     })
                 );
+                continue;
             }
             if (targetMap.has(strValue)) {
-                throw new Error(
+                errors.push(
                     getErrorMessage({
                         processCol,
                         excelRowIndex,
-                        fileName,
                         typeErrorValue: "дублирующее"
                     })
                 );
+                continue;
             }
             targetMap.set(strValue, row);
             keys.push(strValue);
             if (i % CHUNK_SIZE === 0)
                 await new Promise((resolve) => setTimeout(resolve, 0));
         }
+        if (errors.length > 0) {
+            throw new ProcessingError(errors, fileName);
+        }
         return keys;
     };
     console.time("Build Map rows and all keys");
-    const mainKeys = await populateMapAndGetKeys(
-        mainSheet,
-        mainMap,
-        globals.processColNum,
-        "сводной таблицы"
-    );
-    const avrKeys = await populateMapAndGetKeys(
-        avrSheet,
-        avrMap,
-        globals.processColNum,
-        "АВР"
-    );
+    let allKeys = [];
+    try {
+        const mainKeys = await populateMapAndGetKeys(
+            mainSheet,
+            mainMap,
+            globals.processColNum,
+            "сводной таблицы"
+        );
+        const avrKeys = await populateMapAndGetKeys(
+            avrSheet,
+            avrMap,
+            globals.processColNum,
+            "АВР"
+        );
 
-    const allKeys = [...new Set([...mainKeys, ...avrKeys])].sort(sortKeys);
+        allKeys = [...new Set([...mainKeys, ...avrKeys])].sort(sortKeys);
+    } catch (error) {
+        console.log(error.message);
+        throw new Error(
+            `Ошибка создания массивов ключей: <br> ${error.htmlMessage}`
+        );
+    }
+
     console.timeEnd("Build Map rows and all keys");
 
     console.time("Build rows");

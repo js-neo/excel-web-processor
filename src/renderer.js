@@ -237,10 +237,16 @@ async function processExcelFiles(mainFile, avrFile) {
 
         allKeys = [...new Set([...mainKeys, ...avrKeys])].sort(sortKeys);
     } catch (error) {
-        console.log(error.message);
-        throw new Error(
-            `Ошибка создания массивов ключей: <br> ${error.htmlMessage}`
-        );
+        if (error instanceof ProcessingError) {
+            console.log(error.message);
+            throw new Error(
+                `Ошибка создания массивов ключей: <div style="margin-left: 20px;"> ${error.htmlMessage}</div>`
+            );
+        } else {
+            throw new Error(
+                `Ошибка создания массивов ключей: <div style="margin-left: 20px;"> ${error.message}</div>`
+            );
+        }
     }
 
     console.timeEnd("Build Map rows and all keys");
@@ -304,7 +310,7 @@ async function processExcelFiles(mainFile, avrFile) {
     const mainData = mainSheet.getSheetValues().slice(2);
 
     mainData.forEach((row, index) => {
-        const avrRow = avrMap.get(row[globals.processColNum]);
+        const avrRow = avrMap.get(row[globals.processColNum].trim());
         const cell = mainSheet.getCell(index + 2, insertIndex);
         cell.value = avrRow ? avrRow[4] : 0;
     });
